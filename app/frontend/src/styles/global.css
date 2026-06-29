@@ -967,6 +967,8 @@ body.modal-open {
   line-height: 1.5;
   color: var(--muted);
   margin-top: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .news-content-link {
   color: var(--primary);
