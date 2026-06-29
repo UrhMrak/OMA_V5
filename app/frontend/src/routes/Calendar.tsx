@@ -406,6 +406,9 @@ export default function CalendarPage() {
                     role={canPasteHere ? 'button' : undefined}
                     title={canPasteHere ? 'Paste copied event here' : undefined}
                   >
+                    {dayIdx === 0 ? (
+                      <span className="calendar-week-badge">{row.weekNumber}</span>
+                    ) : null}
                     {cell ? <div className="calendar-date">{cell.getDate()}</div> : null}
                     {dayEvents.map((e) => (
                       <button

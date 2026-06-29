@@ -424,6 +424,9 @@ body {
   padding-top: 6px;
   height: 140px;
 }
+.calendar-week-badge {
+  display: none;
+}
 .calendar-cell {
   height: 140px;
   border: 1px dashed var(--border);
@@ -534,19 +537,40 @@ body {
   }
 }
 @media (max-width: 480px) {
-  .calendar-grid-with-weeks {
-    grid-template-columns: 16px repeat(7, 1fr);
-    gap: 2px;
+  .calendar-anim-viewport {
+    margin-left: -14px;
+    margin-right: -14px;
   }
-  .calendar-cell,
-  .calendar-week-number {
-    height: 76px;
+  .calendar-grid-with-weeks {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+  .calendar-week-number,
+  .calendar-week-number-head {
+    display: none;
+  }
+  .calendar-cell {
+    height: 92px;
+    position: relative;
+    padding: 2px;
+    border-radius: 4px;
   }
   .calendar-head {
     font-size: 9px;
   }
-  .calendar-week-number {
-    font-size: 11px;
+  .calendar-week-badge {
+    display: block;
+    position: absolute;
+    top: 1px;
+    left: 2px;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1;
+    color: #2563eb;
+    pointer-events: none;
+  }
+  .calendar-cell:has(.calendar-week-badge) .calendar-date {
+    text-align: right;
   }
 }
 .modal-backdrop {
