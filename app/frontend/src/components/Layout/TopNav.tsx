@@ -28,7 +28,15 @@ export default function TopNav() {
 
   return (
     <header className="topnav">
-      <Link to="/" className="brand">Orchestra Manager</Link>
+      <Link to="/" className="brand">
+        <img
+          className="brand-logo"
+          src={`${import.meta.env.BASE_URL}sitelogosmall.svg`}
+          alt=""
+          aria-hidden="true"
+        />
+        <span>Orchestra Manager</span>
+      </Link>
 
       <button
         type="button"
