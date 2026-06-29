@@ -12,10 +12,13 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow non-browser clients (no origin) and any configured origin.
-      if (!origin || FRONTEND_ORIGINS.includes(origin)) return callback(null, true);
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+      if (!origin || FRONTEND_ORIGINS.includes(origin.replace(/\/+$/, ''))) {
+        return callback(null, true);
+      }
+      // eslint-disable-next-line no-console
+      console.warn(`CORS blocked origin: ${origin}`);
+      return callback(null, false);
     },
-    credentials: true,
   })
 );
 app.use(express.json({ limit: '5mb' }));

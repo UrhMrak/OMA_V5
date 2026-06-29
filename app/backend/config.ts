@@ -5,9 +5,10 @@ dotenv.config();
 export const PORT = process.env.PORT || 4000;
 
 // Comma-separated list of allowed frontend origins (CORS).
+// For GitHub Pages use https://YOUR_USERNAME.github.io (no repo path).
 export const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
