@@ -10,15 +10,9 @@ const app = express();
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow non-browser clients (no origin) and any configured origin.
-      if (!origin || FRONTEND_ORIGINS.includes(origin.replace(/\/+$/, ''))) {
-        return callback(null, true);
-      }
-      // eslint-disable-next-line no-console
-      console.warn(`CORS blocked origin: ${origin}`);
-      return callback(null, false);
-    },
+    origin: FRONTEND_ORIGINS,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 app.use(express.json({ limit: '5mb' }));
@@ -29,9 +23,13 @@ app.use('/api/posts', postsRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/library', libraryRoutes);
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, allowedOrigins: FRONTEND_ORIGINS });
+});
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Server listening on http://localhost:${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log(`CORS allowed origins: ${FRONTEND_ORIGINS.join(', ') || '(none)'}`);
 });
