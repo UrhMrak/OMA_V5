@@ -34,6 +34,15 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 },
 });
 
+// Supabase Storage object keys reject many non-ASCII characters. Build a safe
+// key while keeping the original display name + logical path untouched.
+function toStorageKey(p: string): string {
+  return p
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9/._ -]/g, '_');
+}
+
 function baseName(p: string): string {
   const parts = p.split('/');
   return parts[parts.length - 1] || p;
@@ -224,10 +233,13 @@ router.post(
 
     const { data: existing } = await supabase
       .from(TABLE)
-      .select('name')
+      .select('name, storage_key')
       .eq('type', 'file')
       .like('path', `${folder}/%`);
     const usedNames = new Set<string>((existing || []).map((row: any) => row.name));
+    const usedKeys = new Set<string>(
+      (existing || []).map((row: any) => row.storage_key).filter(Boolean)
+    );
 
     const saved: Array<{ filename: string; size: number; path: string }> = [];
 
@@ -244,9 +256,20 @@ router.post(
       usedNames.add(candidate);
 
       const itemPath = `${folder}/${candidate}`;
+      let storageKeyValue = toStorageKey(itemPath);
+      const keyDot = storageKeyValue.lastIndexOf('.');
+      const keyStem = keyDot > 0 ? storageKeyValue.slice(0, keyDot) : storageKeyValue;
+      const keyExt = keyDot > 0 ? storageKeyValue.slice(keyDot) : '';
+      let keyCounter = 1;
+      while (usedKeys.has(storageKeyValue)) {
+        storageKeyValue = `${keyStem}-${keyCounter}${keyExt}`;
+        keyCounter += 1;
+      }
+      usedKeys.add(storageKeyValue);
+
       const { error: uploadError } = await supabase.storage
         .from(LIBRARY_BUCKET)
-        .upload(itemPath, file.buffer, { contentType: 'application/pdf', upsert: true });
+        .upload(storageKeyValue, file.buffer, { contentType: 'application/pdf', upsert: true });
       if (uploadError) return res.status(500).json({ error: uploadError.message });
 
       const { error: insertError } = await supabase.from(TABLE).insert({
@@ -254,7 +277,7 @@ router.post(
         path: itemPath,
         name: candidate,
         type: 'file',
-        storage_key: itemPath,
+        storage_key: storageKeyValue,
         size: file.size,
       });
       if (insertError) return res.status(500).json({ error: insertError.message });

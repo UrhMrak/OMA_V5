@@ -47,6 +47,14 @@ function randomUUID() {
   return crypto.randomUUID();
 }
 
+// Supabase Storage object keys reject many non-ASCII characters.
+function toStorageKey(p) {
+  return p
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9/._ -]/g, '_');
+}
+
 async function migratePosts() {
   const posts = readJson(path.join(DATA_DIR, 'posts.json'), []);
   console.log(`Migrating ${posts.length} posts...`);
@@ -141,9 +149,10 @@ async function migrateLibrary() {
 
   for (const file of files) {
     const buffer = fs.readFileSync(file.localPath);
+    const storageKeyValue = toStorageKey(file.relPath);
     const { error: uploadError } = await supabase.storage
       .from(LIBRARY_BUCKET)
-      .upload(file.relPath, buffer, { contentType: 'application/pdf', upsert: true });
+      .upload(storageKeyValue, buffer, { contentType: 'application/pdf', upsert: true });
     if (uploadError) {
       console.error(`  ! Upload failed (${file.relPath}): ${uploadError.message}`);
       continue;
@@ -154,7 +163,7 @@ async function migrateLibrary() {
         path: file.relPath,
         name: file.name,
         type: 'file',
-        storage_key: file.relPath,
+        storage_key: storageKeyValue,
         size: file.size,
       },
       { onConflict: 'path' }
