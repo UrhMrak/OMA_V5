@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Local data and uploaded files (migrated to Supabase)
+/app/data/*.json
+/app/backend/data/*.json
+/app/uploads/
+/app/backend/uploads/
+
+# OS / editor
+.DS_Store
+*.log

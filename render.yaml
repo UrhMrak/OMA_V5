@@ -1,0 +1,30 @@
+# Render Blueprint for the Orchestra Manager backend.
+# In Render: New -> Blueprint -> connect this repo. Render reads this file.
+# After creation, fill in the env vars marked `sync: false` in the dashboard.
+
+services:
+  - type: web
+    name: orchestra-manager-backend
+    runtime: node
+    plan: free
+    rootDir: app/backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MUSICIAN_PASSWORD
+        sync: false
+      - key: SUPABASE_LIBRARY_BUCKET
+        value: library
+      - key: SUPABASE_POSTS_BUCKET
+        value: posts
