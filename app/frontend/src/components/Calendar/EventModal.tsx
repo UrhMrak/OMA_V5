@@ -10,6 +10,7 @@ import {
   inputValueToISO,
   isoToWallDate,
   nowFloatingISO,
+  formatWallTime,
 } from '../../lib/date';
 import { downloadICS } from '../../lib/ics';
 import DeleteIcon from '../icons/DeleteIcon';
@@ -95,6 +96,7 @@ export default function EventModal({
   onCopy?: (event: EventItem) => void;
 }) {
   const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const isCreating = event === null;
   const navigate = useNavigate();
 
@@ -180,7 +182,7 @@ export default function EventModal({
   function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text', tight = false) {
     const value = (form[key] as string) || '';
     const readOnly = role !== 'admin';
-    const inputStyle = readOnly ? { border: 'none' } : {};
+    const inputStyle = readOnly ? { border: 'none', background: 'transparent' } : {};
     const rowClass = tight ? 'row-gap tight' : 'row-gap';
     
     if (type === 'color') {
@@ -270,15 +272,15 @@ export default function EventModal({
     const startValue = form.dateISO || '';
     const endValue = form.endDateISO || '';
     const readOnly = role !== 'admin';
-    const inputStyle = readOnly ? { border: 'none' } : {};
+    const inputStyle = readOnly ? { border: 'none', background: 'transparent' } : {};
     const startDateValue = isoToInputValue(startValue);
-    const endDateValue = isoToInputValue(endValue);
+    const endTimeValue = formatWallTime(endValue);
 
     return (
       <div className="row-gap">
         <label className="label">Date & Time</label>
-        <div className="row" style={{ gap: 12 }}>
-          <div style={{ flex: 1 }}>
+        <div className="row date-range-row" style={{ gap: 12 }}>
+          <div className="date-range-field" style={{ flex: 1 }}>
             <input
               className="input"
               type="datetime-local"
@@ -289,17 +291,14 @@ export default function EventModal({
                 const nextStartIso = inputValueToISO(e.target.value);
                 if (!nextStartIso) return;
                 const startMs = Date.parse(nextStartIso);
+                const startDatePart = e.target.value.slice(0, 10);
                 setForm((prev) => {
-                  const previousStartMs = prev.dateISO ? Date.parse(prev.dateISO) : NaN;
-                  const previousEndMs = prev.endDateISO ? Date.parse(prev.endDateISO) : NaN;
+                  const previousEndTime = formatWallTime(prev.endDateISO);
                   let nextEndIso = prev.endDateISO;
 
-                  const isPrevDurationDefault =
-                    !Number.isNaN(previousStartMs) &&
-                    !Number.isNaN(previousEndMs) &&
-                    Math.abs(previousEndMs - previousStartMs - DEFAULT_EVENT_DURATION_MS) < 60 * 1000;
-
-                  if (!prev.endDateISO || isPrevDurationDefault) {
+                  if (previousEndTime && startDatePart) {
+                    nextEndIso = inputValueToISO(`${startDatePart}T${previousEndTime}`) || nextEndIso;
+                  } else {
                     nextEndIso = new Date(startMs + DEFAULT_EVENT_DURATION_MS).toISOString();
                   }
 
@@ -312,17 +311,21 @@ export default function EventModal({
               }}
             />
           </div>
-          <div style={{ flex: 1 }}>
+          <div className="date-range-field" style={{ flex: 1 }}>
             <input
               className="input"
-              type="datetime-local"
-              value={endDateValue}
+              type="time"
+              value={endTimeValue}
               disabled={readOnly}
               style={inputStyle}
               onChange={(e) => {
-                const iso = inputValueToISO(e.target.value);
+                const time = e.target.value;
+                if (!time) return;
+                const startDatePart = (isoToInputValue(form.dateISO) || '').slice(0, 10);
+                if (!startDatePart) return;
+                const iso = inputValueToISO(`${startDatePart}T${time}`);
                 if (!iso) return;
-                setForm({ ...form, endDateISO: iso });
+                setForm((prev) => ({ ...prev, endDateISO: iso }));
               }}
             />
           </div>
@@ -356,7 +359,7 @@ export default function EventModal({
     const readOnly = role !== 'admin';
     const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaStyle: CSSProperties = readOnly
-      ? { border: 'none', overflow: 'hidden', resize: 'none' }
+      ? { border: 'none', background: 'transparent', overflow: 'hidden', resize: 'none' }
       : { overflow: 'hidden', resize: 'none' };
 
     useEffect(() => {
@@ -392,7 +395,7 @@ export default function EventModal({
     const readOnly = role !== 'admin';
     const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaStyle: CSSProperties = readOnly
-      ? { border: 'none', overflow: 'hidden', resize: 'none' }
+      ? { border: 'none', background: 'transparent', overflow: 'hidden', resize: 'none' }
       : { overflow: 'hidden', resize: 'none' };
 
     useEffect(() => {
@@ -432,13 +435,15 @@ export default function EventModal({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h3 className="h3">{isCreating ? 'Create Event' : 'Event Details'}</h3>
+        <h3 className="h3">
+          {isCreating ? 'Create Event' : isAdmin ? 'Event Details' : form.title || 'Event'}
+        </h3>
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {dateRangeRow()}
-            {row('Color', 'color', 'color')}
+            {isAdmin && row('Color', 'color', 'color')}
             <hr className="modal-divider" />
-            {row('Title', 'title', 'text', true)}
+            {isAdmin && row('Title', 'title', 'text', true)}
             {row('Activity', 'activity', 'text', true)}
             {row('Venue', 'venue', 'text', true)}
             {programRow()}
