@@ -148,7 +148,7 @@ export default function NewsList() {
     const form = new FormData();
     form.append('title', title.trim());
     form.append('content', content.trim());
-    files.forEach((file) => form.append('attachments', file));
+    files.forEach((file) => form.append('attachments', file, file.name));
 
     await api.upload('/api/posts', form);
     setTitle('');

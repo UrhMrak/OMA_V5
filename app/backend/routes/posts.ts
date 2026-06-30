@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
-import path from 'path';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
+import {
+  contentDisposition,
+  decodeUploadFilename,
+  ensureUniqueFilename,
+  toStoredBasename,
+} from '../lib/filenames';
 import { POSTS_BUCKET } from '../config';
 
 const router = Router();
@@ -33,25 +38,6 @@ const upload = multer({
   },
   limits: { fileSize: 25 * 1024 * 1024 },
 });
-
-function safeFilename(original: string): string {
-  const base = path.basename(original);
-  const replaced = base.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return replaced || `file-${Date.now()}`;
-}
-
-function ensureUniqueName(used: Set<string>, filename: string): string {
-  let candidate = filename;
-  const ext = path.extname(filename);
-  const name = path.basename(filename, ext);
-  let counter = 1;
-  while (used.has(candidate)) {
-    candidate = `${name}-${counter}${ext}`;
-    counter += 1;
-  }
-  used.add(candidate);
-  return candidate;
-}
 
 function extractTextField(input: unknown): string {
   if (Array.isArray(input)) {
@@ -110,10 +96,18 @@ router.post(
 
     const files = (req.files as Express.Multer.File[] | undefined) || [];
     const attachments: PostAttachment[] = [];
-    const usedNames = new Set<string>();
+    const usedDisplayNames = new Set<string>();
+    const usedStorageNames = new Set<string>();
 
     for (const file of files) {
-      const storedFilename = ensureUniqueName(usedNames, safeFilename(file.originalname));
+      const displayName = ensureUniqueFilename(
+        usedDisplayNames,
+        decodeUploadFilename(file.originalname)
+      );
+      const storedFilename = ensureUniqueFilename(
+        usedStorageNames,
+        toStoredBasename(displayName) || `file-${Date.now()}`
+      );
       const { error: uploadError } = await supabase.storage
         .from(POSTS_BUCKET)
         .upload(storageKey(postId, storedFilename), file.buffer, {
@@ -124,7 +118,7 @@ router.post(
 
       attachments.push({
         id: crypto.randomUUID(),
-        name: file.originalname,
+        name: displayName,
         storedFilename,
         size: file.size,
         mimeType: file.mimetype,
@@ -178,10 +172,7 @@ router.get('/:id/attachments/:attachmentId/download', requireAuth, async (req, r
 
   const buffer = Buffer.from(await data.arrayBuffer());
   res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
-  res.setHeader(
-    'Content-Disposition',
-    `inline; filename="${encodeURIComponent(attachment.name)}"`
-  );
+  res.setHeader('Content-Disposition', contentDisposition('inline', attachment.name));
   res.send(buffer);
 });
 

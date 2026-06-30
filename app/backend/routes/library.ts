@@ -3,6 +3,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
+import { contentDisposition, decodeUploadFilename, toStorageKey } from '../lib/filenames';
 import { LIBRARY_BUCKET } from '../config';
 
 const router = Router();
@@ -33,15 +34,6 @@ const upload = multer({
   },
   limits: { fileSize: 25 * 1024 * 1024 },
 });
-
-// Supabase Storage object keys reject many non-ASCII characters. Build a safe
-// key while keeping the original display name + logical path untouched.
-function toStorageKey(p: string): string {
-  return p
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9/._ -]/g, '_');
-}
 
 function baseName(p: string): string {
   const parts = p.split('/');
@@ -244,7 +236,7 @@ router.post(
     const saved: Array<{ filename: string; size: number; path: string }> = [];
 
     for (const file of files) {
-      let candidate = file.originalname;
+      let candidate = decodeUploadFilename(file.originalname);
       const dot = candidate.lastIndexOf('.');
       const stem = dot > 0 ? candidate.slice(0, dot) : candidate;
       const ext = dot > 0 ? candidate.slice(dot) : '';
@@ -340,7 +332,7 @@ router.get('/download', requireAuth, async (req, res) => {
 
   const buffer = Buffer.from(await data.arrayBuffer());
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(item.name)}"`);
+  res.setHeader('Content-Disposition', contentDisposition('inline', item.name));
   res.send(buffer);
 });
 
