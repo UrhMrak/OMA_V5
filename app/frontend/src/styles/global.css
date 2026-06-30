@@ -577,6 +577,17 @@ body {
   white-space: normal;
   padding: 2px 3px;
 }
+.calendar-events-compact .calendar-cell .pill .pill-top,
+.calendar-events-compact .calendar-cell .pill .pill-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.calendar-events-compact .calendar-cell .pill {
+  white-space: nowrap;
+}
 @media (max-width: 768px) {
   .calendar-week-view .calendar-cell,
   .calendar-week-view .calendar-week-number {

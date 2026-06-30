@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react';
 import { EventItem } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -97,6 +98,7 @@ export default function EventModal({
   onCopy?: (event: EventItem) => void;
 }) {
   const { role } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
   const navigate = useNavigate();
@@ -158,7 +160,7 @@ export default function EventModal({
 
   async function handleDelete() {
     if (!event) return;
-    const confirmed = window.confirm(`Delete "${event.title || 'this event'}"? This cannot be undone.`);
+    const confirmed = window.confirm(t('event.deleteConfirm', { title: event.title || t('event.thisEvent') }));
     if (!confirmed) return;
     setIsDeleting(true);
     try {
@@ -169,7 +171,7 @@ export default function EventModal({
       requestClose();
     } catch (error) {
       console.error('Delete event failed:', error);
-      const message = error instanceof Error && error.message ? error.message : 'Failed to delete event. Please try again.';
+      const message = error instanceof Error && error.message ? error.message : t('event.deleteFailed');
       alert(message);
     } finally {
       setIsDeleting(false);
@@ -283,7 +285,7 @@ export default function EventModal({
 
     return (
       <div className="row-gap">
-        <label className="label">Date & Time</label>
+        <label className="label">{t('event.dateTime')}</label>
         <div className="row date-range-row">
           <input
             className="input date-start"
@@ -340,7 +342,7 @@ export default function EventModal({
     const hasPath = Boolean(libraryPath);
     return (
       <div className="row-gap">
-        <label className="label">Music Library</label>
+        <label className="label">{t('event.musicLibrary')}</label>
         <div className="row" style={{ alignItems: 'center', gap: 8 }}>
           <button
             type="button"
@@ -348,9 +350,9 @@ export default function EventModal({
             disabled={!hasPath}
             onClick={() => handleOpenLibrary(libraryPath)}
           >
-            Open Folder
+            {t('event.openFolder')}
           </button>
-          <span className="small muted">{hasPath ? libraryPath : 'No folder detected'}</span>
+          <span className="small muted">{hasPath ? libraryPath : t('event.noFolder')}</span>
         </div>
       </div>
     );
@@ -375,7 +377,7 @@ export default function EventModal({
 
     return (
       <div className="row-gap tight event-detail-field">
-        <label className="label">Program</label>
+        <label className="label">{t('event.program')}</label>
         <textarea 
           className="textarea" 
           ref={textAreaRef}
@@ -413,7 +415,7 @@ export default function EventModal({
 
     return (
       <div className="row-gap tight event-detail-field">
-        <label className="label">Other Participants</label>
+        <label className="label">{t('event.otherParticipants')}</label>
         <textarea
           className="textarea"
           ref={textAreaRef}
@@ -451,7 +453,7 @@ export default function EventModal({
 
     return (
       <div className="row-gap tight event-detail-field">
-        <label className="label">Other</label>
+        <label className="label">{t('event.other')}</label>
         <textarea
           className="textarea"
           ref={textAreaRef}
@@ -484,10 +486,10 @@ export default function EventModal({
         onClick={(e) => e.stopPropagation()}
       >
         {isAdmin ? (
-          <h3 className="h3">{isCreating ? 'Create Event' : 'Event Details'}</h3>
+          <h3 className="h3">{isCreating ? t('event.create') : t('event.details')}</h3>
         ) : (
           <div className="event-heading">
-            <h3 className="h3 event-heading-title">{form.title || 'Event'}</h3>
+            <h3 className="h3 event-heading-title">{form.title || t('event.fallbackTitle')}</h3>
             {form.activity ? (
               <div className="event-heading-activity">{form.activity}</div>
             ) : null}
@@ -496,17 +498,17 @@ export default function EventModal({
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {dateRangeRow()}
-            {isAdmin && row('Color', 'color', 'color')}
+            {isAdmin && row(t('event.color'), 'color', 'color')}
             <hr className="modal-divider" />
-            {isAdmin && row('Title', 'title', 'text', true)}
-            {isAdmin && row('Activity', 'activity', 'text', true)}
-            {row('Venue', 'venue', 'text', true, true)}
+            {isAdmin && row(t('event.title'), 'title', 'text', true)}
+            {isAdmin && row(t('event.activity'), 'activity', 'text', true)}
+            {row(t('event.venue'), 'venue', 'text', true, true)}
             {programRow()}
-            {row('Conductor', 'conductor', 'text', true, true)}
-            {row('Soloists', 'soloists', 'text', true, true)}
+            {row(t('event.conductor'), 'conductor', 'text', true, true)}
+            {row(t('event.soloists'), 'soloists', 'text', true, true)}
             {otherParticipantsRow()}
-            {row('Ensemble', 'ensemble', 'text', true, true)}
-            {row('Dress', 'dress', 'text', true, true)}
+            {row(t('event.ensemble'), 'ensemble', 'text', true, true)}
+            {row(t('event.dress'), 'dress', 'text', true, true)}
             {otherRow()}
             {libraryFolderRow()}
           </div>
@@ -518,8 +520,8 @@ export default function EventModal({
               className="icon-button delete-button"
               onClick={handleDelete}
               disabled={isDeleting}
-              aria-label="Delete event"
-              title="Delete event"
+              aria-label={t('event.deleteEvent')}
+              title={t('event.deleteEvent')}
             >
               <DeleteIcon size={16} />
             </button>
@@ -529,7 +531,7 @@ export default function EventModal({
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
             {!isCreating && event && (
               <button className="btn" onClick={() => downloadICS(event)}>
-                Add to Calendar
+                {t('event.addToCalendar')}
               </button>
             )}
             {role === 'admin' && !isCreating && event && onCopy && (
@@ -540,13 +542,13 @@ export default function EventModal({
                   requestClose();
                 }}
               >
-                Copy
+                {t('event.copy')}
               </button>
             )}
-            <button className="btn" onClick={requestClose}>Close</button>
+            <button className="btn" onClick={requestClose}>{t('event.close')}</button>
             {role === 'admin' && (
               <button className="btn primary" onClick={save}>
-                {isCreating ? 'Create' : 'Save'}
+                {isCreating ? t('event.createBtn') : t('event.save')}
               </button>
             )}
           </div>

@@ -3,12 +3,14 @@ import { useLocation } from 'react-router-dom';
 import { LibraryNode } from '../lib/types';
 import { api } from '../lib/api';
 import FolderTree from '../components/Library/FolderTree';
+import { useLanguage } from '../context/LanguageContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 
 export default function Library() {
   const [tree, setTree] = useState<LibraryNode | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const { t } = useLanguage();
   const location = useLocation();
 
   usePageReady(true);
@@ -36,7 +38,7 @@ export default function Library() {
 
   return (
     <div>
-      <h2 className="h2">Music Library</h2>
+      <h2 className="h2">{t('library.title')}</h2>
       {!loaded || !tree ? (
         <div className="skeleton-folder-grid">
           {Array.from({ length: 8 }).map((_, index) => (

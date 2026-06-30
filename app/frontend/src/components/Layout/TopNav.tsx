@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import SettingsIcon from '../icons/SettingsIcon';
 
 export default function TopNav() {
   const { username, clearSession } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,7 +44,7 @@ export default function TopNav() {
       <button
         type="button"
         className={`nav-toggle${menuOpen ? ' open' : ''}`}
-        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        aria-label={menuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
         aria-expanded={menuOpen}
         aria-controls="primary-navigation"
         onClick={() => setMenuOpen((open) => !open)}
@@ -54,21 +56,21 @@ export default function TopNav() {
 
       <div id="primary-navigation" className={`nav-collapse${menuOpen ? ' open' : ''}`}>
         <nav className="nav">
-          <NavLink to="/" end>Home</NavLink>
-          <NavLink to="/calendar">Calendar</NavLink>
-          <NavLink to="/library">Music Library</NavLink>
-          <NavLink to="/stats">Stats</NavLink>
-          <NavLink to="/about">About</NavLink>
+          <NavLink to="/" end>{t('nav.home')}</NavLink>
+          <NavLink to="/calendar">{t('nav.calendar')}</NavLink>
+          <NavLink to="/library">{t('nav.library')}</NavLink>
+          <NavLink to="/stats">{t('nav.stats')}</NavLink>
+          <NavLink to="/about">{t('nav.about')}</NavLink>
         </nav>
         <div className="nav-right">
           <span className="muted small">{username}</span>
           <div className="nav-right-actions">
-            <button className="btn" onClick={logout}>Logout</button>
+            <button className="btn" onClick={logout}>{t('nav.logout')}</button>
             <NavLink
               to="/settings"
               className="btn nav-settings-btn"
-              aria-label="Settings"
-              title="Settings"
+              aria-label={t('nav.settings')}
+              title={t('nav.settings')}
             >
               <SettingsIcon />
             </NavLink>

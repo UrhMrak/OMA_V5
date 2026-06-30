@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, Fragment } from 'react';
 import { EventItem } from '../lib/types';
 import { useEvents } from '../context/EventsContext';
+import { useEventSize } from '../context/EventSizeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { api } from '../lib/api';
 import EventModal from '../components/Calendar/EventModal';
 import { useAuth } from '../context/AuthContext';
@@ -60,11 +62,6 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
   };
 }
 
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 const getTransparentColor = (color: string, alpha = 0.15) => {
   if (color.startsWith('#')) {
     const hex = color.slice(1);
@@ -93,6 +90,8 @@ const formatPillTime = (iso: string) => formatWallTime(iso);
 
 export default function CalendarPage() {
   const { events, loadEvents } = useEvents();
+  const { eventSize } = useEventSize();
+  const { t, dict, locale } = useLanguage();
   const [selected, setSelected] = useState<EventItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [copiedEvent, setCopiedEvent] = useState<EventItem | null>(() => {
@@ -132,7 +131,7 @@ export default function CalendarPage() {
     } catch (error) {
       console.error('Paste event failed:', error);
       const message =
-        error instanceof Error && error.message ? error.message : 'Failed to paste event. Please try again.';
+        error instanceof Error && error.message ? error.message : t('calendar.pasteFailed');
       alert(message);
     }
   };
@@ -319,13 +318,17 @@ export default function CalendarPage() {
 
   const headerLabel = useMemo(() => {
     if (viewMode === 'month') {
-      return `${monthNames[currentMonth]} ${currentYear}`;
+      return `${dict.calendar.months[currentMonth]} ${currentYear}`;
     }
     const weekEnd = addDays(weekStart, 6);
-    const startStr = weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const endStr = weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    return `Week ${getISOWeekNumber(weekStart)} · ${startStr} – ${endStr}`;
-  }, [viewMode, currentYear, currentMonth, weekStart]);
+    const startStr = weekStart.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+    const endStr = weekEnd.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+    return t('calendar.weekHeader', {
+      week: getISOWeekNumber(weekStart),
+      start: startStr,
+      end: endStr,
+    });
+  }, [viewMode, currentYear, currentMonth, weekStart, dict, locale, t]);
 
   const todayKey = getLocalDateKey(now);
 
@@ -336,14 +339,14 @@ export default function CalendarPage() {
           {headerLabel}
         </h2>
         <div className="calendar-toolbar-actions">
-          <div className="calendar-view-toggle" role="group" aria-label="Calendar view">
+          <div className="calendar-view-toggle" role="group" aria-label={t('calendar.viewLabel')}>
             <button
               type="button"
               className={viewMode === 'month' ? 'active' : ''}
               aria-pressed={viewMode === 'month'}
               onClick={() => changeView('month')}
             >
-              Month
+              {t('calendar.month')}
             </button>
             <button
               type="button"
@@ -351,7 +354,7 @@ export default function CalendarPage() {
               aria-pressed={viewMode === 'week'}
               onClick={() => changeView('week')}
             >
-              Week
+              {t('calendar.week')}
             </button>
           </div>
           {role === 'admin' && (
@@ -359,7 +362,7 @@ export default function CalendarPage() {
               className="btn primary"
               onClick={() => setIsCreating(true)}
             >
-              + Add Event
+              {t('calendar.addEvent')}
             </button>
           )}
           <button
@@ -368,13 +371,13 @@ export default function CalendarPage() {
             disabled={isCurrent || !!anim}
             style={{ opacity: isCurrent ? 0.5 : 1, cursor: isCurrent ? 'not-allowed' : 'pointer' }}
           >
-            Today
+            {t('calendar.today')}
           </button>
           <button
             className="btn"
             onClick={() => navigate('left')}
             disabled={!canGoPrevious}
-            aria-label={viewMode === 'week' ? 'Previous week' : 'Previous month'}
+            aria-label={viewMode === 'week' ? t('calendar.prevWeek') : t('calendar.prevMonth')}
             style={{ opacity: canGoPrevious ? 1 : 0.5, cursor: canGoPrevious ? 'pointer' : 'not-allowed' }}
           >
             ←
@@ -383,7 +386,7 @@ export default function CalendarPage() {
             className="btn"
             onClick={() => navigate('right')}
             disabled={!canGoNext}
-            aria-label={viewMode === 'week' ? 'Next week' : 'Next month'}
+            aria-label={viewMode === 'week' ? t('calendar.nextWeek') : t('calendar.nextMonth')}
             style={{ opacity: canGoNext ? 1 : 0.5, cursor: canGoNext ? 'pointer' : 'not-allowed' }}
           >
             →
@@ -393,10 +396,12 @@ export default function CalendarPage() {
       {isPasteMode && copiedEvent && (
         <div className="calendar-paste-banner">
           <span>
-            Copied <strong>{copiedEvent.title || 'event'}</strong> — click a day to paste it.
+            {t('calendar.copiedBannerPrefix')}
+            <strong>{copiedEvent.title || t('calendar.eventFallback')}</strong>
+            {t('calendar.copiedBannerSuffix')}
           </span>
           <button type="button" className="btn" onClick={clearCopiedEvent}>
-            Cancel
+            {t('calendar.cancel')}
           </button>
         </div>
       )}
@@ -406,11 +411,11 @@ export default function CalendarPage() {
         onTouchEnd={handleTouchEnd}
       >
         <div
-          className={`calendar-grid-with-weeks ${viewMode === 'week' ? 'calendar-week-view' : ''} ${animClass}`}
+          className={`calendar-grid-with-weeks ${viewMode === 'week' ? 'calendar-week-view' : ''} ${eventSize === 'compact' ? 'calendar-events-compact' : ''} ${animClass}`}
           onAnimationEnd={handleAnimationEnd}
         >
           <div className="calendar-week-number-head"></div>
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+          {dict.calendar.weekdays.map((d) => (
             <div key={d} className="calendar-head">{d}</div>
           ))}
           {rows.map((row, rowIdx) => (
@@ -429,7 +434,7 @@ export default function CalendarPage() {
                     className={`calendar-cell ${cell ? '' : 'empty'} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''}`}
                     onClick={canPasteHere ? () => pasteOnDay(cell as Date) : undefined}
                     role={canPasteHere ? 'button' : undefined}
-                    title={canPasteHere ? 'Paste copied event here' : undefined}
+                    title={canPasteHere ? t('calendar.pasteHere') : undefined}
                   >
                     {dayIdx === 0 ? (
                       <span className="calendar-week-badge">{row.weekNumber}</span>

@@ -1,6 +1,8 @@
 import { Link, NavLink } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function Footer() {
+  const { t } = useLanguage();
   const year = new Date().getFullYear();
 
   return (
@@ -9,32 +11,32 @@ export default function Footer() {
         <div className="footer-col footer-brand-col">
           <Link to="/" className="footer-brand">Orchestra Manager</Link>
           <p className="footer-tagline muted small">
-            Plan rehearsals, manage your music library, and keep your ensemble in sync.
+            {t('footer.tagline')}
           </p>
         </div>
 
         <div className="footer-col">
-          <h4 className="footer-heading">Navigate</h4>
+          <h4 className="footer-heading">{t('footer.navigate')}</h4>
           <nav className="footer-nav">
-            <NavLink to="/" end>Home</NavLink>
-            <NavLink to="/calendar">Calendar</NavLink>
-            <NavLink to="/library">Music Library</NavLink>
-            <NavLink to="/stats">Stats</NavLink>
-            <NavLink to="/about">About</NavLink>
+            <NavLink to="/" end>{t('nav.home')}</NavLink>
+            <NavLink to="/calendar">{t('nav.calendar')}</NavLink>
+            <NavLink to="/library">{t('nav.library')}</NavLink>
+            <NavLink to="/stats">{t('nav.stats')}</NavLink>
+            <NavLink to="/about">{t('nav.about')}</NavLink>
           </nav>
         </div>
 
         <div className="footer-col">
-          <h4 className="footer-heading">Resources</h4>
+          <h4 className="footer-heading">{t('footer.resources')}</h4>
           <nav className="footer-nav">
-            <Link to="/about#help">Help & Support</Link>
-            <Link to="/about#privacy">Privacy Policy</Link>
-            <Link to="/about#terms">Terms of Service</Link>
+            <Link to="/about#help">{t('footer.help')}</Link>
+            <Link to="/about#privacy">{t('footer.privacy')}</Link>
+            <Link to="/about#terms">{t('footer.terms')}</Link>
           </nav>
         </div>
 
         <div className="footer-col">
-          <h4 className="footer-heading">Contact</h4>
+          <h4 className="footer-heading">{t('footer.contact')}</h4>
           <nav className="footer-nav">
             <a href="mailto:mrak.webstudios@gmail.com">mrak.webstudios@gmail.com</a>
           </nav>
@@ -43,7 +45,7 @@ export default function Footer() {
 
       <div className="footer-bottom">
         <span className="muted small">
-          &copy; {year} Mrak Web Development. All rights reserved.
+          {t('footer.rights', { year })}
         </span>
       </div>
     </footer>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { EventItem } from '../lib/types';
 import { useEvents } from '../context/EventsContext';
+import { useLanguage } from '../context/LanguageContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 
@@ -17,28 +18,29 @@ function formatDateTime(e: EventItem): string {
 
 type StatsColumn = {
   key: string;
-  label: string;
+  labelKey: string;
   value: (e: EventItem) => string;
   cellClassName?: string;
   truncate?: boolean;
 };
 
 const COLUMNS: StatsColumn[] = [
-  { key: 'dateTime', label: 'Date & time', value: formatDateTime, cellClassName: 'stats-nowrap' },
-  { key: 'title', label: 'Title', value: (e) => e.title || '' },
-  { key: 'activity', label: 'Activity', value: (e) => e.activity || '' },
-  { key: 'venue', label: 'Venue', value: (e) => e.venue || '' },
-  { key: 'program', label: 'Program', value: (e) => e.program || '', cellClassName: 'stats-program', truncate: true },
-  { key: 'conductor', label: 'Conductor', value: (e) => e.conductor || '' },
-  { key: 'soloists', label: 'Soloist', value: (e) => e.soloists || '' },
-  { key: 'otherParticipants', label: 'Other participants', value: (e) => e.otherParticipants || '' },
-  { key: 'ensemble', label: 'Ensemble', value: (e) => e.ensemble || '' },
-  { key: 'dress', label: 'Dress', value: (e) => e.dress || '' },
-  { key: 'other', label: 'Other', value: (e) => e.other || '' },
+  { key: 'dateTime', labelKey: 'stats.col.dateTime', value: formatDateTime, cellClassName: 'stats-nowrap' },
+  { key: 'title', labelKey: 'stats.col.title', value: (e) => e.title || '' },
+  { key: 'activity', labelKey: 'stats.col.activity', value: (e) => e.activity || '' },
+  { key: 'venue', labelKey: 'stats.col.venue', value: (e) => e.venue || '' },
+  { key: 'program', labelKey: 'stats.col.program', value: (e) => e.program || '', cellClassName: 'stats-program', truncate: true },
+  { key: 'conductor', labelKey: 'stats.col.conductor', value: (e) => e.conductor || '' },
+  { key: 'soloists', labelKey: 'stats.col.soloists', value: (e) => e.soloists || '' },
+  { key: 'otherParticipants', labelKey: 'stats.col.otherParticipants', value: (e) => e.otherParticipants || '' },
+  { key: 'ensemble', labelKey: 'stats.col.ensemble', value: (e) => e.ensemble || '' },
+  { key: 'dress', labelKey: 'stats.col.dress', value: (e) => e.dress || '' },
+  { key: 'other', labelKey: 'stats.col.other', value: (e) => e.other || '' },
 ];
 
 export default function Stats() {
   const { events, loaded, loadEvents } = useEvents();
+  const { t } = useLanguage();
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
@@ -77,16 +79,16 @@ export default function Stats() {
 
   return (
     <div>
-      <h2 className="h2">Stats</h2>
+      <h2 className="h2">{t('stats.title')}</h2>
       <input
         className="input stats-search"
         type="search"
-        placeholder="Search all fields..."
+        placeholder={t('stats.search')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
       <div className="stats-columns">
-        <span className="muted small">Columns:</span>
+        <span className="muted small">{t('stats.columns')}</span>
         {COLUMNS.map((c) => (
           <label key={c.key} className="stats-column-toggle">
             <input
@@ -94,7 +96,7 @@ export default function Stats() {
               checked={!!visibleColumns[c.key]}
               onChange={() => toggleColumn(c.key)}
             />
-            {c.label}
+            {t(c.labelKey)}
           </label>
         ))}
       </div>
@@ -109,14 +111,14 @@ export default function Stats() {
           ))}
         </div>
       ) : shownColumns.length === 0 ? (
-        <p className="muted">All columns are hidden. Enable at least one column to view data.</p>
+        <p className="muted">{t('stats.allHidden')}</p>
       ) : (
         <div className="stats-table-wrap">
           <table className="stats-table">
             <thead>
               <tr>
                 {shownColumns.map((c) => (
-                  <th key={c.key}>{c.label}</th>
+                  <th key={c.key}>{t(c.labelKey)}</th>
                 ))}
               </tr>
             </thead>
@@ -142,7 +144,7 @@ export default function Stats() {
         </div>
       )}
       {loaded && shownColumns.length > 0 && rows.length === 0 && (
-        <p className="muted">{query.trim() ? 'No matching entries.' : 'No data available.'}</p>
+        <p className="muted">{query.trim() ? t('stats.noMatching') : t('stats.noData')}</p>
       )}
     </div>
   );

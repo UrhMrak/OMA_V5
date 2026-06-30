@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PostItem } from '../../lib/types';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { usePageReady } from '../Layout/PageTransition';
 import { SkeletonCardList } from '../Layout/Skeleton';
 import PdfViewerModal from './PdfViewerModal';
@@ -25,6 +26,7 @@ export default function NewsList() {
   const [loaded, setLoaded] = useState(false);
   const objectUrlRef = useRef<string | null>(null);
   const { role } = useAuth();
+  const { t } = useLanguage();
 
   usePageReady(true);
 
@@ -52,7 +54,7 @@ export default function NewsList() {
     });
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(message || 'Failed to load file.');
+      throw new Error(message || t('news.loadFileFailed'));
     }
     return response.blob();
   }
@@ -77,7 +79,7 @@ export default function NewsList() {
         triggerBlobDownload(objectUrl, attachment.name);
         URL.revokeObjectURL(objectUrl);
       } catch (error) {
-        alert(error instanceof Error ? error.message : 'Failed to download file.');
+        alert(error instanceof Error ? error.message : t('news.downloadFileFailed'));
       }
       return;
     }
@@ -93,7 +95,7 @@ export default function NewsList() {
       setViewer({
         name: attachment.name,
         objectUrl: null,
-        error: error instanceof Error ? error.message : 'Failed to load PDF.',
+        error: error instanceof Error ? error.message : t('news.loadPdfFailed'),
         loading: false,
       });
     }
@@ -166,8 +168,8 @@ export default function NewsList() {
       {role === 'admin' && (
         <div className="card" style={{ marginBottom: 12 }}>
           <div className="row-gap">
-            <input className="input" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <textarea className="textarea" placeholder="Write an update..." value={content} onChange={(e) => setContent(e.target.value)} />
+            <input className="input" placeholder={t('news.titlePlaceholder')} value={title} onChange={(e) => setTitle(e.target.value)} />
+            <textarea className="textarea" placeholder={t('news.contentPlaceholder')} value={content} onChange={(e) => setContent(e.target.value)} />
             <input
               ref={fileInputRef}
               type="file"
@@ -182,7 +184,7 @@ export default function NewsList() {
                 ))}
               </ul>
             )}
-            <button className="btn primary" onClick={addPost}>Post</button>
+            <button className="btn primary" onClick={addPost}>{t('news.post')}</button>
           </div>
         </div>
       )}
@@ -197,7 +199,7 @@ export default function NewsList() {
             <p className="news-content">{renderContent(p.content)}</p>
             {p.attachments && p.attachments.length > 0 && (
               <div className="news-attachments">
-                <div className="muted small">Attachments</div>
+                <div className="muted small">{t('news.attachments')}</div>
                 <ul>
                   {p.attachments.map((attachment) => (
                     <li key={attachment.id}>
@@ -216,7 +218,7 @@ export default function NewsList() {
               </div>
             )}
             {role === 'admin' && (
-              <button className="btn danger" onClick={() => remove(p.id)}>Delete</button>
+              <button className="btn danger" onClick={() => remove(p.id)}>{t('news.delete')}</button>
             )}
           </li>
         ))}

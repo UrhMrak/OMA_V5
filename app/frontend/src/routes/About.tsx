@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
+
+const SUPPORT_EMAIL = 'mrak.webstudios@gmail.com';
 
 export default function About() {
   const { hash } = useLocation();
+  const { dict } = useLanguage();
+  const about = dict.about;
 
   useEffect(() => {
     if (!hash) return;
@@ -13,113 +18,51 @@ export default function About() {
   return (
     <div className="row-gap">
       <div>
-        <h2 className="h2">About</h2>
-        <p className="muted">
-          Orchestra Manager helps you plan rehearsals, manage your music library,
-          and keep your ensemble in sync.
-        </p>
+        <h2 className="h2">{about.title}</h2>
+        <p className="muted">{about.intro}</p>
       </div>
 
       <section id="help" className="card">
-        <h3 className="h3">Help &amp; Support</h3>
-        <p className="muted small">
-          Need a hand? We&apos;re here to help you get the most out of Orchestra
-          Manager.
-        </p>
-        <p className="muted small">
-          Browse common questions below, or reach out to our team and we&apos;ll
-          get back to you as soon as we can.
-        </p>
+        <h3 className="h3">{about.help.heading}</h3>
+        <p className="muted small">{about.help.p1}</p>
+        <p className="muted small">{about.help.p2}</p>
         <ul className="muted small">
-          <li>
-            <strong>Getting started:</strong> Use the Calendar to schedule
-            rehearsals and concerts, and the Music Library to organize your
-            scores and parts.
-          </li>
-          <li>
-            <strong>Managing events:</strong> Click any date to add or edit an
-            event. Members can view upcoming activities from the dashboard.
-          </li>
-          <li>
-            <strong>Account &amp; access:</strong> Contact your administrator if
-            you have trouble signing in or need updated permissions.
-          </li>
+          {about.help.items.map((item) => (
+            <li key={item.label}>
+              <strong>{item.label}</strong> {item.text}
+            </li>
+          ))}
         </ul>
         <p className="muted small">
-          Still stuck? Email us at{' '}
-          <a href="mailto:mrak.webstudios@gmail.com">mrak.webstudios@gmail.com</a>{' '}
-          and we&apos;ll be happy to assist.
+          {about.help.contactPrefix}
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+          {about.help.contactSuffix}
         </p>
       </section>
 
       <section id="privacy" className="card">
-        <h3 className="h3">Privacy Policy</h3>
+        <h3 className="h3">{about.privacy.heading}</h3>
+        <p className="muted small">{about.privacy.intro}</p>
+        {about.privacy.sections.map((section) => (
+          <p key={section.label} className="muted small">
+            <strong>{section.label}</strong> {section.text}
+          </p>
+        ))}
         <p className="muted small">
-          Your privacy is important to us. This Privacy Policy explains how
-          Orchestra Manager collects, uses, and protects your information when you
-          use our service.
-        </p>
-        <p className="muted small">
-          <strong>Information we collect.</strong> We collect information you
-          provide directly, such as your name, email address, and any content you
-          add to the platform (events, files, and notes). We also collect basic
-          usage data to help us improve the service.
-        </p>
-        <p className="muted small">
-          <strong>How we use information.</strong> We use your information to
-          operate and maintain the service, communicate with you, and improve your
-          experience. We do not sell your personal information to third parties.
-        </p>
-        <p className="muted small">
-          <strong>Data storage and security.</strong> We take reasonable measures
-          to protect your data against unauthorized access, alteration, or
-          disclosure. However, no method of transmission or storage is completely
-          secure.
-        </p>
-        <p className="muted small">
-          <strong>Your rights.</strong> You may request access to, correction of,
-          or deletion of your personal information at any time by contacting us.
-        </p>
-        <p className="muted small">
-          If you have any questions about this Privacy Policy, please contact us at{' '}
-          <a href="mailto:mrak.webstudios@gmail.com">mrak.webstudios@gmail.com</a>.
+          {about.privacy.contactPrefix}
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+          {about.privacy.contactSuffix}
         </p>
       </section>
 
       <section id="terms" className="card">
-        <h3 className="h3">Terms of Service</h3>
-        <p className="muted small">
-          By accessing or using Orchestra Manager, you agree to be bound by these
-          Terms of Service. Please read them carefully.
-        </p>
-        <p className="muted small">
-          <strong>Use of the service.</strong> You agree to use the service only
-          for lawful purposes and in accordance with these terms. You are
-          responsible for maintaining the confidentiality of your account
-          credentials and for all activity under your account.
-        </p>
-        <p className="muted small">
-          <strong>Content.</strong> You retain ownership of the content you upload,
-          but grant us the rights necessary to host and display it within the
-          service. You are responsible for ensuring you have the rights to any
-          content you share.
-        </p>
-        <p className="muted small">
-          <strong>Availability.</strong> We strive to keep the service available
-          but do not guarantee uninterrupted access. We may modify, suspend, or
-          discontinue features at any time.
-        </p>
-        <p className="muted small">
-          <strong>Limitation of liability.</strong> The service is provided
-          &quot;as is&quot; without warranties of any kind. To the fullest extent
-          permitted by law, we are not liable for any damages arising from your use
-          of the service.
-        </p>
-        <p className="muted small">
-          <strong>Changes to these terms.</strong> We may update these Terms of
-          Service from time to time. Continued use of the service after changes
-          take effect constitutes acceptance of the revised terms.
-        </p>
+        <h3 className="h3">{about.terms.heading}</h3>
+        <p className="muted small">{about.terms.intro}</p>
+        {about.terms.sections.map((section) => (
+          <p key={section.label} className="muted small">
+            <strong>{section.label}</strong> {section.text}
+          </p>
+        ))}
       </section>
     </div>
   );

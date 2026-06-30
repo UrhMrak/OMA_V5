@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { LibraryNode } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import DeleteIcon from '../icons/DeleteIcon';
 
 function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCreated: () => void }) {
+  const { t } = useLanguage();
   const [folderName, setFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -21,7 +23,7 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
       setShowForm(false);
       onCreated();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create folder');
+      alert(err instanceof Error ? err.message : t('library.createFailed'));
     } finally {
       setIsCreating(false);
     }
@@ -35,7 +37,7 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
         className="btn btn-sm"
         style={{ marginTop: '0.5rem' }}
       >
-        + Create Folder
+        {t('library.createFolder')}
       </button>
     );
   }
@@ -56,14 +58,14 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
         type="text"
         value={folderName}
         onChange={(e) => setFolderName(e.target.value)}
-        placeholder="Folder name"
+        placeholder={t('library.folderName')}
         disabled={isCreating}
         style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
         autoFocus
       />
       <div style={{ display: 'flex', gap: '8px' }}>
         <button type="submit" disabled={isCreating || !folderName.trim()} className="btn btn-sm">
-          Create
+          {t('library.create')}
         </button>
         <button
           type="button"
@@ -74,7 +76,7 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
           disabled={isCreating}
           className="btn btn-sm"
         >
-          Cancel
+          {t('library.cancel')}
         </button>
       </div>
     </form>
@@ -127,6 +129,7 @@ function UploadIcon() {
 }
 
 function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: string; onUploaded: () => void; onSuccess?: () => void }) {
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -144,7 +147,7 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
       console.log('Uploading to folder:', folderPath, 'Files:', Array.from(files).map(f => f.name));
       const result = await api.upload('/api/library/upload', form);
       console.log('Upload result:', result);
-      setSuccess('Uploaded successfully');
+      setSuccess(t('library.uploadSuccess'));
       if (onSuccess) onSuccess();
       if (inputRef.current) inputRef.current.value = '';
       // Wait a bit then refresh to ensure backend has written the file
@@ -155,7 +158,7 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
       }, 300);
     } catch (e: any) {
       console.error('Upload error:', e);
-      const message = e?.message || 'Upload failed. Only PDFs up to 25MB are allowed.';
+      const message = e?.message || t('library.uploadFailed');
       setError(message);
     } finally {
       setBusy(false);
@@ -172,7 +175,7 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
         style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
       >
         <UploadIcon />
-        {busy ? 'Uploading…' : 'Upload'}
+        {busy ? t('library.uploading') : t('library.upload')}
       </button>
       <input
         ref={inputRef}
@@ -263,6 +266,7 @@ function YearSection({ yearNode, onRefresh, onDownload, initialSegments = [] }: 
 
 function WeekFolder({ weekFolder, onRefresh, onDownload, initialSegments = [] }: { weekFolder: LibraryNode; onRefresh: () => void; onDownload: (file: LibraryNode) => Promise<void> | void; initialSegments?: string[] }) {
   const { role } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = role === 'admin';
   const targetSegment = initialSegments[0];
   const shouldExpand = targetSegment === weekFolder.name;
@@ -278,7 +282,7 @@ function WeekFolder({ weekFolder, onRefresh, onDownload, initialSegments = [] }:
   const handleDelete = useCallback(
     async (target: LibraryNode) => {
       if (!target.path) return;
-      const confirmed = window.confirm(`Delete "${target.name}"? This cannot be undone.`);
+      const confirmed = window.confirm(t('library.deleteConfirm', { name: target.name }));
       if (!confirmed) return;
       setDeletingPath(target.path);
       try {
@@ -286,13 +290,13 @@ function WeekFolder({ weekFolder, onRefresh, onDownload, initialSegments = [] }:
         await onRefresh();
       } catch (error) {
         console.error('Delete failed:', error);
-        const message = error instanceof Error && error.message ? error.message : 'Delete failed. Please try again.';
+        const message = error instanceof Error && error.message ? error.message : t('library.deleteFailed');
         alert(message);
       } finally {
         setDeletingPath(null);
       }
     },
-    [onRefresh]
+    [onRefresh, t]
   );
 
   return (
@@ -347,7 +351,7 @@ function WeekFolder({ weekFolder, onRefresh, onDownload, initialSegments = [] }:
                 <button
                   type="button"
                   className="icon-button delete-button"
-                  aria-label={`Delete ${file.name}`}
+                  aria-label={t('library.deleteAria', { name: file.name })}
                   onClick={(event) => {
                     event.stopPropagation();
                     handleDelete(file);
@@ -390,6 +394,7 @@ function FolderItem({
   deletingPath?: string;
 }) {
   const { role } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = role === 'admin';
   const targetSegment = initialSegments[0];
   const shouldExpand = targetSegment === node.name;
@@ -414,7 +419,7 @@ function FolderItem({
           <button
             type="button"
             className="icon-button delete-button"
-            aria-label={`Delete ${node.name}`}
+            aria-label={t('library.deleteAria', { name: node.name })}
             onClick={(event) => {
               event.stopPropagation();
               onDelete(node);
@@ -468,7 +473,7 @@ function FolderItem({
                 <button
                   type="button"
                   className="icon-button delete-button"
-                  aria-label={`Delete ${file.name}`}
+                  aria-label={t('library.deleteAria', { name: file.name })}
                   onClick={(event) => {
                     event.stopPropagation();
                     onDelete(file);
@@ -487,6 +492,7 @@ function FolderItem({
 }
 
 export default function FolderTree({ node, onRefresh, initialPath }: { node: LibraryNode; onRefresh: () => void; initialPath?: string }) {
+  const { t } = useLanguage();
   const [downloadError, setDownloadError] = useState('');
   const initialSegments = useMemo(() => {
     if (!initialPath) return [] as string[];
@@ -503,7 +509,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
 
   const downloadFile = useCallback(async (file: LibraryNode) => {
     if (!file.path) {
-      setDownloadError('File path not found.');
+      setDownloadError(t('library.filePathMissing'));
       return;
     }
 
@@ -515,7 +521,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
 
       if (!response.ok) {
         const message = await response.text();
-        throw new Error(message || 'Download failed.');
+        throw new Error(message || t('library.downloadFailed'));
       }
 
       const blob = await response.blob();
@@ -529,10 +535,10 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      const message = error instanceof Error && error.message ? error.message : 'Download failed. Please try again.';
+      const message = error instanceof Error && error.message ? error.message : t('library.downloadFailedRetry');
       setDownloadError(message);
     }
-  }, []);
+  }, [t]);
   const children = node.children || [];
   const yearNodes = children.filter((c) => c.type === 'folder' && /^\d{4}$/.test(c.name));
 
@@ -545,7 +551,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
     const folderChildren = children.filter((c) => c.type === 'folder');
     const fileChildren = children.filter((c) => c.type === 'file');
     if (folderChildren.length === 0 && fileChildren.length === 0) {
-      return <p className="muted">No folders found</p>;
+      return <p className="muted">{t('library.noFolders')}</p>;
     }
     return (
       <div className="library-container">
@@ -553,7 +559,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
         <div className="year-section">
           <h3 className="h3 year-title">
             <FolderIcon />
-            Library
+            {t('library.libraryFallback')}
           </h3>
           <div className="folder-grid">
             {folderChildren.map((folder) => (

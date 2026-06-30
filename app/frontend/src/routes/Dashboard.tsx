@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { EventItem } from '../lib/types';
 import { isSameLocalDay, formatWallTime } from '../lib/date';
 import { useEvents } from '../context/EventsContext';
+import { useLanguage } from '../context/LanguageContext';
 import EventModal from '../components/Calendar/EventModal';
 import { usePageReady } from '../components/Layout/PageTransition';
 import { SkeletonCardList } from '../components/Layout/Skeleton';
@@ -19,6 +20,7 @@ function formatEventTimeRange(
 
 export default function Dashboard() {
   const { events, loaded, loadEvents } = useEvents();
+  const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
   useEffect(() => {
@@ -74,14 +76,14 @@ export default function Dashboard() {
   return (
     <div className="grid grid-2">
       <section>
-        <h2 className="h2">Latest News</h2>
+        <h2 className="h2">{t('dashboard.latestNews')}</h2>
         <NewsList />
       </section>
       <section>
-        <h2 className="h2">Today's Events</h2>
-        {renderEventList(todayEvents, 'No events scheduled for today.')}
-        <h2 className="h2" style={{ marginTop: 24 }}>Tomorrow's Events</h2>
-        {renderEventList(tomorrowEvents, 'No events scheduled for tomorrow.')}
+        <h2 className="h2">{t('dashboard.todayEvents')}</h2>
+        {renderEventList(todayEvents, t('dashboard.noToday'))}
+        <h2 className="h2" style={{ marginTop: 24 }}>{t('dashboard.tomorrowEvents')}</h2>
+        {renderEventList(tomorrowEvents, t('dashboard.noTomorrow'))}
       </section>
       {selectedEvent && (
         <EventModal
