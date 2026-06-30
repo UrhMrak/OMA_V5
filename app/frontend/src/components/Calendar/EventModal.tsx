@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { EventItem } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -16,6 +16,7 @@ import {
 import { downloadICS } from '../../lib/ics';
 import DeleteIcon from '../icons/DeleteIcon';
 import { useModalClose } from '../Layout/useModalClose';
+import AutoResizeTextarea from '../AutoResizeTextarea';
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 const FALLBACK_EVENT_COLOR = '#2563eb';
@@ -285,12 +286,12 @@ export default function EventModal({
     return (
       <div className={rowClass}>
         <label className="label">{label}</label>
-        <input 
-          className="input" 
-          value={String(value)} 
-          readOnly={readOnly} 
+        <AutoResizeTextarea
+          className="textarea"
+          value={String(value)}
+          readOnly={readOnly}
           style={inputStyle}
-          onChange={(e) => setForm({ ...form, [key]: e.target.value })} 
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         />
       </div>
     );
@@ -388,36 +389,21 @@ export default function EventModal({
   function programRow() {
     const value = form.program || '';
     const readOnly = role !== 'admin';
-    const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaStyle: CSSProperties = readOnly
-      ? { border: 'none', background: 'transparent', overflow: 'hidden', resize: 'none' }
-      : { overflow: 'hidden', resize: 'none' };
-
-    useEffect(() => {
-      if (textAreaRef.current) {
-        textAreaRef.current.style.height = 'auto';
-        textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
-      }
-    }, [value]);
+      ? { border: 'none', background: 'transparent' }
+      : {};
 
     if (readOnly && !value) return null;
 
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.program')}</label>
-        <textarea 
-          className="textarea" 
-          ref={textAreaRef}
-          value={value} 
-          readOnly={readOnly} 
-          rows={1}
+        <AutoResizeTextarea
+          className="textarea"
+          value={value}
+          readOnly={readOnly}
           style={textareaStyle}
           onChange={(e) => setForm({ ...form, program: e.target.value })}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
-          }} 
         />
       </div>
     );
@@ -426,36 +412,21 @@ export default function EventModal({
   function otherParticipantsRow() {
     const value = form.otherParticipants || '';
     const readOnly = role !== 'admin';
-    const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaStyle: CSSProperties = readOnly
-      ? { border: 'none', background: 'transparent', overflow: 'hidden', resize: 'none' }
-      : { overflow: 'hidden', resize: 'none' };
-
-    useEffect(() => {
-      if (textAreaRef.current) {
-        textAreaRef.current.style.height = 'auto';
-        textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
-      }
-    }, [value]);
+      ? { border: 'none', background: 'transparent' }
+      : {};
 
     if (readOnly && !value) return null;
 
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.otherParticipants')}</label>
-        <textarea
+        <AutoResizeTextarea
           className="textarea"
-          ref={textAreaRef}
           value={value}
           readOnly={readOnly}
-          rows={1}
           style={textareaStyle}
           onChange={(e) => setForm({ ...form, otherParticipants: e.target.value })}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
-          }}
         />
       </div>
     );
@@ -464,36 +435,21 @@ export default function EventModal({
   function otherRow() {
     const value = form.other || '';
     const readOnly = role !== 'admin';
-    const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaStyle: CSSProperties = readOnly
-      ? { border: 'none', background: 'transparent', overflow: 'hidden', resize: 'none' }
-      : { overflow: 'hidden', resize: 'none' };
-
-    useEffect(() => {
-      if (textAreaRef.current) {
-        textAreaRef.current.style.height = 'auto';
-        textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
-      }
-    }, [value]);
+      ? { border: 'none', background: 'transparent' }
+      : {};
 
     if (readOnly && !value) return null;
 
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.other')}</label>
-        <textarea
+        <AutoResizeTextarea
           className="textarea"
-          ref={textAreaRef}
           value={value}
           readOnly={readOnly}
-          rows={1}
           style={textareaStyle}
           onChange={(e) => setForm({ ...form, other: e.target.value })}
-          onInput={(e) => {
-            const el = e.currentTarget;
-            el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
-          }}
         />
       </div>
     );

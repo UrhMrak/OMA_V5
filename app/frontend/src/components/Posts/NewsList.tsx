@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { usePageReady } from '../Layout/PageTransition';
 import { SkeletonCardList } from '../Layout/Skeleton';
 import PdfViewerModal from './PdfViewerModal';
+import AutoResizeTextarea from '../AutoResizeTextarea';
 
 type PostAttachment = NonNullable<PostItem['attachments']>[number];
 
@@ -168,8 +169,18 @@ export default function NewsList() {
       {role === 'admin' && (
         <div className="card" style={{ marginBottom: 12 }}>
           <div className="row-gap">
-            <input className="input" placeholder={t('news.titlePlaceholder')} value={title} onChange={(e) => setTitle(e.target.value)} />
-            <textarea className="textarea" placeholder={t('news.contentPlaceholder')} value={content} onChange={(e) => setContent(e.target.value)} />
+            <AutoResizeTextarea
+              className="textarea"
+              placeholder={t('news.titlePlaceholder')}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <AutoResizeTextarea
+              className="textarea"
+              placeholder={t('news.contentPlaceholder')}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+            />
             <input
               ref={fileInputRef}
               type="file"

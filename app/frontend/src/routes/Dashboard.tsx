@@ -65,7 +65,12 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="card-title">{e.title}</div>
-              <div className="muted small">{e.program}</div>
+              {e.activity?.trim() && (
+                <div className="dashboard-event-activity">{e.activity.trim()}</div>
+              )}
+              {e.program?.trim() && (
+                <div className="muted small">{e.program.trim()}</div>
+              )}
             </div>
           </li>
         ))}
@@ -74,12 +79,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="grid grid-2">
-      <section>
+    <div className="grid grid-2 dashboard-grid">
+      <section className="dashboard-news">
         <h2 className="h2">{t('dashboard.latestNews')}</h2>
         <NewsList />
       </section>
-      <section>
+      <section className="dashboard-events">
         <h2 className="h2">{t('dashboard.todayEvents')}</h2>
         {renderEventList(todayEvents, t('dashboard.noToday'))}
         <h2 className="h2" style={{ marginTop: 24 }}>{t('dashboard.tomorrowEvents')}</h2>

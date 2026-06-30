@@ -313,6 +313,9 @@ body {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+  .dashboard-grid .dashboard-events {
+    order: -1;
+  }
 }
 .card {
   background: var(--card);
@@ -331,6 +334,11 @@ body {
 .card-title {
   font-weight: 600;
   margin-bottom: 4px;
+}
+.dashboard-event-activity {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 2px;
 }
 .event-color {
   width: 10px;
