@@ -666,7 +666,7 @@ body {
   min-width: 320px;
   width: calc(100vw - 32px);
   max-width: 520px;
-  border: 1px solid var(--border);
+  border: none;
   padding: 16px;
   font-size: 14px;
   z-index: 1001;
@@ -736,6 +736,8 @@ body {
   font-size: 15px;
   min-width: 0;
   text-align: left;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 .date-range-row .input:disabled {
   flex: 0 0 auto;
@@ -769,6 +771,12 @@ body {
 /* Prevent background scroll when modal is open */
 body.modal-open {
   overflow: hidden;
+}
+@media (max-width: 480px) {
+  .modal .event-detail-field .input,
+  .modal .event-detail-field .textarea {
+    font-size: 13px;
+  }
 }
 @media (max-width: 520px) {
   .modal .row {

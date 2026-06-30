@@ -181,12 +181,14 @@ export default function EventModal({
     navigate('/library', { state: { targetLibraryPath: path } });
   }
 
-  function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text', tight = false) {
+  function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text', tight = false, detailField = false) {
     const value = (form[key] as string) || '';
     const readOnly = role !== 'admin';
     if (readOnly && !value) return null;
     const inputStyle = readOnly ? { border: 'none', background: 'transparent' } : {};
-    const rowClass = tight ? 'row-gap tight' : 'row-gap';
+    const rowClass = [tight ? 'row-gap tight' : 'row-gap', detailField ? 'event-detail-field' : '']
+      .filter(Boolean)
+      .join(' ');
     
     if (type === 'color') {
       if (readOnly) {
@@ -372,7 +374,7 @@ export default function EventModal({
     if (readOnly && !value) return null;
 
     return (
-      <div className="row-gap tight">
+      <div className="row-gap tight event-detail-field">
         <label className="label">Program</label>
         <textarea 
           className="textarea" 
@@ -410,7 +412,7 @@ export default function EventModal({
     if (readOnly && !value) return null;
 
     return (
-      <div className="row-gap tight">
+      <div className="row-gap tight event-detail-field">
         <label className="label">Other Participants</label>
         <textarea
           className="textarea"
@@ -460,14 +462,14 @@ export default function EventModal({
             <hr className="modal-divider" />
             {isAdmin && row('Title', 'title', 'text', true)}
             {isAdmin && row('Activity', 'activity', 'text', true)}
-            {row('Venue', 'venue', 'text', true)}
+            {row('Venue', 'venue', 'text', true, true)}
             {programRow()}
-            {row('Conductor', 'conductor', 'text', true)}
-            {row('Soloists', 'soloists', 'text', true)}
+            {row('Conductor', 'conductor', 'text', true, true)}
+            {row('Soloists', 'soloists', 'text', true, true)}
             {otherParticipantsRow()}
-            {row('Ensemble', 'ensemble', 'text', true)}
-            {row('Dress', 'dress', 'text', true)}
-            {row('Other', 'other', 'text', true)}
+            {row('Ensemble', 'ensemble', 'text', true, true)}
+            {row('Dress', 'dress', 'text', true, true)}
+            {row('Other', 'other', 'text', true, true)}
             {libraryFolderRow()}
           </div>
         </div>
