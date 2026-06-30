@@ -494,13 +494,14 @@ export default function EventModal({
               <div className="event-heading-activity">{form.activity}</div>
             ) : null}
             {dateRangeRow({ hideLabel: true, className: 'event-heading-datetime' })}
+            <hr className="modal-divider event-heading-divider" />
           </div>
         )}
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {isAdmin && dateRangeRow()}
             {isAdmin && row(t('event.color'), 'color', 'color')}
-            <hr className="modal-divider" />
+            {isAdmin && <hr className="modal-divider" />}
             {isAdmin && row(t('event.title'), 'title', 'text', true)}
             {isAdmin && row(t('event.activity'), 'activity', 'text', true)}
             {row(t('event.venue'), 'venue', 'text', true, true)}

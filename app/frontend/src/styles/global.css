@@ -231,23 +231,40 @@ body {
 }
 .event-heading-datetime {
   padding-top: 8px;
+  margin-left: 0;
+  padding-left: 0;
 }
 .event-heading-datetime .date-range-row {
   gap: 3px;
-  margin-left: 0;
-  padding-left: 0;
+  margin: 0;
+  padding: 0;
 }
 .event-heading-datetime .date-range-row .input,
 .event-heading-datetime .date-range-sep {
   font-weight: 500;
   padding: 0;
   margin: 0;
+  text-indent: 0;
+}
+.event-heading-datetime .date-range-row .input:disabled {
+  margin-left: 0;
+  padding-left: 0;
+}
+.event-heading-datetime .date-range-row .input::-webkit-calendar-picker-indicator {
+  display: none;
 }
 .event-heading-datetime .date-range-row .input[type='datetime-local']::-webkit-datetime-edit,
 .event-heading-datetime .date-range-row .input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper,
 .event-heading-datetime .date-range-row .input[type='time']::-webkit-datetime-edit,
 .event-heading-datetime .date-range-row .input[type='time']::-webkit-datetime-edit-fields-wrapper {
   padding: 0;
+  margin: 0;
+}
+.event-heading-divider {
+  margin: 12px 0 0;
+  border-top-width: 2px;
+  border-top-color: color-mix(in srgb, var(--muted) 55%, var(--border));
+  opacity: 1;
 }
 .muted {
   color: var(--muted);
@@ -591,7 +608,7 @@ body {
 }
 .calendar-week-view .calendar-cell,
 .calendar-week-view .calendar-week-number {
-  height: 440px;
+  height: 480px;
 }
 .calendar-week-view .calendar-cell .pill {
   white-space: normal;
@@ -611,13 +628,13 @@ body {
 @media (max-width: 768px) {
   .calendar-week-view .calendar-cell,
   .calendar-week-view .calendar-week-number {
-    height: 320px;
+    height: 360px;
   }
 }
 @media (max-width: 480px) {
   .calendar-week-view .calendar-cell,
   .calendar-week-view .calendar-week-number {
-    height: 240px;
+    height: 280px;
   }
 }
 @media (min-width: 1024px) {
