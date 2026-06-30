@@ -833,6 +833,38 @@ body.modal-open {
   opacity: 0.6;
   pointer-events: none;
 }
+.auth-lang-toggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.auth-lang-toggle button {
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.3s ease, font-size 0.3s ease;
+}
+.auth-lang-toggle button.active {
+  color: var(--primary);
+  font-size: 16px;
+}
+.auth-lang-separator {
+  width: 2px;
+  height: 16px;
+  background: var(--muted);
+}
 .auth-center {
   display: flex;
   align-items: flex-start;

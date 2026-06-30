@@ -26,30 +26,30 @@ export default function Login() {
 
   return (
     <div className="auth-center">
-      <div className="auth-content">
-        <div
-          className="calendar-view-toggle auth-lang-toggle"
-          role="group"
-          aria-label={t('settings.language')}
-          style={{ alignSelf: 'flex-end' }}
+      <div
+        className="auth-lang-toggle"
+        role="group"
+        aria-label={t('settings.language')}
+      >
+        <button
+          type="button"
+          className={language === 'en' ? 'active' : ''}
+          aria-pressed={language === 'en'}
+          onClick={() => setLanguage('en')}
         >
-          <button
-            type="button"
-            className={language === 'en' ? 'active' : ''}
-            aria-pressed={language === 'en'}
-            onClick={() => setLanguage('en')}
-          >
-            EN
-          </button>
-          <button
-            type="button"
-            className={language === 'is' ? 'active' : ''}
-            aria-pressed={language === 'is'}
-            onClick={() => setLanguage('is')}
-          >
-            IS
-          </button>
-        </div>
+          EN
+        </button>
+        <span className="auth-lang-separator" aria-hidden="true" />
+        <button
+          type="button"
+          className={language === 'is' ? 'active' : ''}
+          aria-pressed={language === 'is'}
+          onClick={() => setLanguage('is')}
+        >
+          IS
+        </button>
+      </div>
+      <div className="auth-content">
         <img className="auth-logo" src={`${import.meta.env.BASE_URL}sitelogo.svg`} alt={t('login.logoAlt')} />
         <h1 className="auth-title">{t('login.appTitle')}</h1>
       <form className="card auth-card" onSubmit={onSubmit}>
