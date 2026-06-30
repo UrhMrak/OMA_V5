@@ -340,6 +340,9 @@ body {
   font-size: 14px;
   margin-bottom: 2px;
 }
+.dashboard-event-program {
+  margin-top: 2px;
+}
 .event-color {
   width: 10px;
   height: 10px;

@@ -69,7 +69,7 @@ export default function Dashboard() {
                 <div className="dashboard-event-activity">{e.activity.trim()}</div>
               )}
               {e.program?.trim() && (
-                <div className="muted small">{e.program.trim()}</div>
+                <p className="news-content dashboard-event-program">{e.program.trim()}</p>
               )}
             </div>
           </li>
