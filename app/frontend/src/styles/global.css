@@ -230,41 +230,10 @@ body {
   margin-top: 2px;
 }
 .event-heading-datetime {
-  padding-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-}
-.event-heading-datetime .date-range-row {
-  gap: 3px;
-  margin: 0;
-  padding: 0;
-}
-.event-heading-datetime .date-range-row .input,
-.event-heading-datetime .date-range-sep {
   font-weight: 500;
-  padding: 0;
+  font-size: 15px;
+  padding-top: 8px;
   margin: 0;
-  text-indent: 0;
-}
-.event-heading-datetime .date-range-row .input:disabled {
-  margin-left: 0;
-  padding-left: 0;
-}
-.event-heading-datetime .date-range-row .input::-webkit-calendar-picker-indicator {
-  display: none;
-}
-.event-heading-datetime .date-range-row .input[type='datetime-local']::-webkit-datetime-edit,
-.event-heading-datetime .date-range-row .input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper,
-.event-heading-datetime .date-range-row .input[type='time']::-webkit-datetime-edit,
-.event-heading-datetime .date-range-row .input[type='time']::-webkit-datetime-edit-fields-wrapper {
-  padding: 0;
-  margin: 0;
-}
-.event-heading-divider {
-  margin: 12px 0 0;
-  border-top-width: 2px;
-  border-top-color: color-mix(in srgb, var(--muted) 55%, var(--border));
-  opacity: 1;
 }
 .muted {
   color: var(--muted);

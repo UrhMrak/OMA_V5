@@ -86,7 +86,28 @@ function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
   };
 }
 
-export default function EventModal({ 
+function formatHeadingDateTime(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined,
+  locale?: string
+): string {
+  const start = isoToWallDate(startISO);
+  if (Number.isNaN(start.getTime())) return '';
+
+  const dateText = start.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
+  const startTime = formatWallTime(startISO);
+  const endTime = formatWallTime(endISO);
+
+  if (startTime && endTime) return `${dateText}, ${startTime} - ${endTime}`;
+  if (startTime) return `${dateText}, ${startTime}`;
+  return dateText;
+}
+
+export default function EventModal({
   event, 
   onClose, 
   onSave,
@@ -98,7 +119,7 @@ export default function EventModal({
   onCopy?: (event: EventItem) => void;
 }) {
   const { role } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
   const navigate = useNavigate();
@@ -275,7 +296,13 @@ export default function EventModal({
     );
   }
 
-  function dateRangeRow(options?: { hideLabel?: boolean; className?: string }) {
+  function eventHeadingDateTime() {
+    const text = formatHeadingDateTime(form.dateISO, form.endDateISO, locale);
+    if (!text) return null;
+    return <div className="event-heading-datetime">{text}</div>;
+  }
+
+  function dateRangeRow() {
     const startValue = form.dateISO || '';
     const endValue = form.endDateISO || '';
     const readOnly = role !== 'admin';
@@ -284,8 +311,8 @@ export default function EventModal({
     const endTimeValue = formatWallTime(endValue);
 
     return (
-      <div className={['row-gap', options?.className].filter(Boolean).join(' ')}>
-        {!options?.hideLabel && <label className="label">{t('event.dateTime')}</label>}
+      <div className="row-gap">
+        <label className="label">{t('event.dateTime')}</label>
         <div className="row date-range-row">
           <input
             className="input date-start"
@@ -493,8 +520,7 @@ export default function EventModal({
             {form.activity ? (
               <div className="event-heading-activity">{form.activity}</div>
             ) : null}
-            {dateRangeRow({ hideLabel: true, className: 'event-heading-datetime' })}
-            <hr className="modal-divider event-heading-divider" />
+            {eventHeadingDateTime()}
           </div>
         )}
         <div className="modal-body">
