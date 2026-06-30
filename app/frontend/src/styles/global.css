@@ -1162,6 +1162,7 @@ body.modal-open {
   line-height: 1.5;
   color: var(--muted);
   margin-top: 6px;
+  padding-left: 10px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
