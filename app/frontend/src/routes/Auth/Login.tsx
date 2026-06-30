@@ -60,7 +60,6 @@ export default function Login() {
         <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
         {error && <div className="error">{error}</div>}
         <button className="btn primary" type="submit">{t('login.signIn')}</button>
-        <p className="muted small" style={{ marginTop: 8 }}>{t('login.devCreds')}</p>
       </form>
       </div>
     </div>
