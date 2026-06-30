@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { EventItem } from '../lib/types';
-import { api } from '../lib/api';
+import { useEvents } from '../context/EventsContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 
@@ -37,18 +38,20 @@ const COLUMNS: StatsColumn[] = [
 ];
 
 export default function Stats() {
-  const [events, setEvents] = useState<EventItem[]>([]);
+  const { events, loaded, loadEvents } = useEvents();
+  const location = useLocation();
   const [query, setQuery] = useState('');
-  const [loaded, setLoaded] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(COLUMNS.map((c) => [c.key, true]))
   );
 
   useEffect(() => {
-    api.get<EventItem[]>('/api/events').then(setEvents).finally(() => setLoaded(true));
-  }, []);
+    if (location.pathname === '/stats') {
+      loadEvents();
+    }
+  }, [location.pathname, loadEvents]);
 
-  usePageReady(true);
+  usePageReady(loaded);
 
   const shownColumns = useMemo(
     () => COLUMNS.filter((c) => visibleColumns[c.key]),

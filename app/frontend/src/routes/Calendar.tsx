@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState, Fragment } from 'react';
+import { useMemo, useRef, useState, Fragment } from 'react';
 import { EventItem } from '../lib/types';
+import { useEvents } from '../context/EventsContext';
 import { api } from '../lib/api';
 import EventModal from '../components/Calendar/EventModal';
 import { useAuth } from '../context/AuthContext';
@@ -91,7 +92,7 @@ const getTransparentColor = (color: string, alpha = 0.15) => {
 const formatPillTime = (iso: string) => formatWallTime(iso);
 
 export default function CalendarPage() {
-  const [events, setEvents] = useState<EventItem[]>([]);
+  const { events, loadEvents } = useEvents();
   const [selected, setSelected] = useState<EventItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [copiedEvent, setCopiedEvent] = useState<EventItem | null>(() => {
@@ -146,20 +147,15 @@ export default function CalendarPage() {
   const [weekStart, setWeekStart] = useState(() => getStartOfWeekMonday(now));
   const [anim, setAnim] = useState<{ phase: 'exit' | 'enter'; direction: Direction } | null>(null);
 
-  const loadEvents = () => {
-    api.get<EventItem[]>('/api/events').then(setEvents);
-  };
-
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
   const byDate = useMemo(() => {
     const map: Record<string, EventItem[]> = {};
     for (const e of events) {
       const d = getLocalDateKeyFromISO(e.dateISO);
       map[d] ||= [];
       map[d].push(e);
+    }
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => Date.parse(a.dateISO) - Date.parse(b.dateISO));
     }
     return map;
   }, [events]);

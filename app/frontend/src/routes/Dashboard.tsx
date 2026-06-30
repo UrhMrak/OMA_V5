@@ -1,8 +1,8 @@
 import NewsList from '../components/Posts/NewsList';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EventItem } from '../lib/types';
 import { isSameLocalDay, formatWallTime } from '../lib/date';
-import { api } from '../lib/api';
+import { useEvents } from '../context/EventsContext';
 import EventModal from '../components/Calendar/EventModal';
 import { usePageReady } from '../components/Layout/PageTransition';
 import { SkeletonCardList } from '../components/Layout/Skeleton';
@@ -18,18 +18,8 @@ function formatEventTimeRange(
 }
 
 export default function Dashboard() {
-  const [events, setEvents] = useState<EventItem[]>([]);
+  const { events, loaded, loadEvents } = useEvents();
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  const loadEvents = useCallback(async () => {
-    try {
-      const data = await api.get<EventItem[]>('/api/events');
-      setEvents(data);
-    } finally {
-      setLoaded(true);
-    }
-  }, []);
 
   useEffect(() => {
     loadEvents();

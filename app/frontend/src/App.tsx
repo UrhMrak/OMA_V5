@@ -1,10 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { EventsProvider } from './context/EventsContext';
 import Dashboard from './routes/Dashboard';
 import CalendarPage from './routes/Calendar';
 import Library from './routes/Library';
 import Stats from './routes/Stats';
 import About from './routes/About';
+import Settings from './routes/Settings';
 import Login from './routes/Auth/Login';
 import TopNav from './components/Layout/TopNav';
 import Footer from './components/Layout/Footer';
@@ -23,6 +25,7 @@ function Layout() {
               <Route path="/library" element={<Library />} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/about" element={<About />} />
+              <Route path="/settings" element={<Settings />} />
             </Routes>
           )}
         </PageTransition>
@@ -41,10 +44,12 @@ function ProtectedApp() {
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={<ProtectedApp />} />
-      </Routes>
+      <EventsProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={<ProtectedApp />} />
+        </Routes>
+      </EventsProvider>
     </AuthProvider>
   );
 }

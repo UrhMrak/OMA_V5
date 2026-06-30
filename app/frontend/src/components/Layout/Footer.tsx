@@ -27,9 +27,9 @@ export default function Footer() {
         <div className="footer-col">
           <h4 className="footer-heading">Resources</h4>
           <nav className="footer-nav">
-            <a href="/about">Help & Support</a>
-            <a href="/about">Privacy Policy</a>
-            <a href="/about">Terms of Service</a>
+            <Link to="/about#help">Help & Support</Link>
+            <Link to="/about#privacy">Privacy Policy</Link>
+            <Link to="/about#terms">Terms of Service</Link>
           </nav>
         </div>
 

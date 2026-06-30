@@ -111,6 +111,17 @@ body {
   align-items: center;
   gap: 12px;
 }
+.nav-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  line-height: 0;
+}
+.nav-settings-btn.active {
+  color: var(--primary);
+  border-color: var(--primary);
+}
 .nav-toggle {
   display: none;
   flex-direction: column;

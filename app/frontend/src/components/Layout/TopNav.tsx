@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import SettingsIcon from '../icons/SettingsIcon';
 
 export default function TopNav() {
   const { username, clearSession } = useAuth();
@@ -62,6 +63,14 @@ export default function TopNav() {
         <div className="nav-right">
           <span className="muted small">{username}</span>
           <button className="btn" onClick={logout}>Logout</button>
+          <NavLink
+            to="/settings"
+            className="btn nav-settings-btn"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <SettingsIcon />
+          </NavLink>
         </div>
       </div>
     </header>
