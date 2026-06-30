@@ -1158,11 +1158,11 @@ body.modal-open {
   color: var(--primary-dark, #1d4ed8);
 }
 .news-content {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
   margin-top: 6px;
-  padding-left: 10px;
+  padding: 4px 0 0 14px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
