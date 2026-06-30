@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from 'react';
 import { EventItem } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -126,7 +126,21 @@ export default function EventModal({
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? undefined));
   const [isDeleting, setIsDeleting] = useState(false);
+  const [scrollFades, setScrollFades] = useState({ top: false, bottom: false });
+  const modalBodyRef = useRef<HTMLDivElement>(null);
   const { closing, requestClose } = useModalClose(onClose);
+
+  const updateScrollFades = useCallback(() => {
+    if (isAdmin) return;
+    const el = modalBodyRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const hasOverflow = scrollHeight > clientHeight + 1;
+    setScrollFades({
+      top: hasOverflow && scrollTop > 2,
+      bottom: hasOverflow && scrollTop + clientHeight < scrollHeight - 2,
+    });
+  }, [isAdmin]);
 
   useEffect(() => {
     if (event) {
@@ -135,6 +149,16 @@ export default function EventModal({
       setForm(normalizeForm());
     }
   }, [event]);
+
+  useEffect(() => {
+    if (isAdmin) return;
+    updateScrollFades();
+    const el = modalBodyRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(updateScrollFades);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isAdmin, updateScrollFades, form, event]);
 
   // Lock background scroll while modal is open
   useEffect(() => {
@@ -523,7 +547,12 @@ export default function EventModal({
             {eventHeadingDateTime()}
           </div>
         )}
-        <div className="modal-body">
+        <div className="modal-body-wrapper">
+          <div
+            ref={modalBodyRef}
+            className="modal-body"
+            onScroll={isAdmin ? undefined : updateScrollFades}
+          >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {isAdmin && dateRangeRow()}
             {isAdmin && row(t('event.color'), 'color', 'color')}
@@ -540,6 +569,19 @@ export default function EventModal({
             {otherRow()}
             {libraryFolderRow()}
           </div>
+          </div>
+          {!isAdmin && (
+            <>
+              <div
+                className={`modal-body-fade modal-body-fade--top${scrollFades.top ? ' visible' : ''}`}
+                aria-hidden="true"
+              />
+              <div
+                className={`modal-body-fade modal-body-fade--bottom${scrollFades.bottom ? ' visible' : ''}`}
+                aria-hidden="true"
+              />
+            </>
+          )}
         </div>
         <div className="row-between" style={{ marginTop: 16 }}>
           {role === 'admin' && !isCreating ? (

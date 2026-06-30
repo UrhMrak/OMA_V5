@@ -35,6 +35,10 @@
 * {
   box-sizing: border-box;
 }
+html {
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+}
 html,
 body,
 #root {
@@ -55,7 +59,10 @@ body {
   justify-content: space-between;
   column-gap: 16px;
   row-gap: 0;
-  padding: 12px 20px;
+  padding: calc(12px + env(safe-area-inset-top, 0px))
+    calc(20px + env(safe-area-inset-right, 0px))
+    12px
+    calc(20px + env(safe-area-inset-left, 0px));
   position: sticky;
   top: 0;
   background: var(--topnav-bg);
@@ -682,7 +689,11 @@ body {
 }
 .modal-backdrop {
   position: fixed;
-  inset: 0;
+  top: calc(-1 * env(safe-area-inset-top, 0px));
+  right: calc(-1 * env(safe-area-inset-right, 0px));
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  left: calc(-1 * env(safe-area-inset-left, 0px));
+  min-height: 100dvh;
   background: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
@@ -753,12 +764,39 @@ body {
   }
 }
 
-.modal-body {
+.modal-body-wrapper {
+  position: relative;
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-height: 0;
   margin-top: 12px;
   margin-bottom: 12px;
+}
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.modal-body-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.modal-body-fade.visible {
+  opacity: 1;
+}
+.modal-body-fade--top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--surface) 0%, transparent 100%);
+}
+.modal-body-fade--bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--surface) 0%, transparent 100%);
 }
 .date-range-row {
   align-items: center;
@@ -802,8 +840,13 @@ body {
 }
 
 /* Prevent background scroll when modal is open */
+html:has(body.modal-open) {
+  background: rgba(0, 0, 0, 0.2);
+}
 body.modal-open {
   overflow: hidden;
+  touch-action: none;
+  background: rgba(0, 0, 0, 0.2);
 }
 @media (max-width: 480px) {
   .modal .event-detail-field .input,
@@ -1354,6 +1397,7 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .app-shell .container {
   flex: 1;

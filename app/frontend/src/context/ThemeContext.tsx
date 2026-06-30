@@ -26,6 +26,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(STORAGE_KEY, theme);
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) {
+      themeColor.setAttribute('content', theme === 'dark' ? '#0f172a' : '#ffffff');
+    }
   }, [theme]);
 
   function setTheme(next: Theme) {
