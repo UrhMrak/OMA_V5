@@ -62,15 +62,17 @@ export default function TopNav() {
         </nav>
         <div className="nav-right">
           <span className="muted small">{username}</span>
-          <button className="btn" onClick={logout}>Logout</button>
-          <NavLink
-            to="/settings"
-            className="btn nav-settings-btn"
-            aria-label="Settings"
-            title="Settings"
-          >
-            <SettingsIcon />
-          </NavLink>
+          <div className="nav-right-actions">
+            <button className="btn" onClick={logout}>Logout</button>
+            <NavLink
+              to="/settings"
+              className="btn nav-settings-btn"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon />
+            </NavLink>
+          </div>
         </div>
       </div>
     </header>

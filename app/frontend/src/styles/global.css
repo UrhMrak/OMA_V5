@@ -111,6 +111,11 @@ body {
   align-items: center;
   gap: 12px;
 }
+.nav-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .nav-settings-btn {
   display: inline-flex;
   align-items: center;

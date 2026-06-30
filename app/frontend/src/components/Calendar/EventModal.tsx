@@ -432,6 +432,44 @@ export default function EventModal({
     );
   }
 
+  function otherRow() {
+    const value = form.other || '';
+    const readOnly = role !== 'admin';
+    const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+    const textareaStyle: CSSProperties = readOnly
+      ? { border: 'none', background: 'transparent', overflow: 'hidden', resize: 'none' }
+      : { overflow: 'hidden', resize: 'none' };
+
+    useEffect(() => {
+      if (textAreaRef.current) {
+        textAreaRef.current.style.height = 'auto';
+        textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
+      }
+    }, [value]);
+
+    if (readOnly && !value) return null;
+
+    return (
+      <div className="row-gap tight event-detail-field">
+        <label className="label">Other</label>
+        <textarea
+          className="textarea"
+          ref={textAreaRef}
+          value={value}
+          readOnly={readOnly}
+          rows={1}
+          style={textareaStyle}
+          onChange={(e) => setForm({ ...form, other: e.target.value })}
+          onInput={(e) => {
+            const el = e.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+          }}
+        />
+      </div>
+    );
+  }
+
   const selectedColor = form.color || FALLBACK_EVENT_COLOR;
   const modalStyle: CSSProperties = {
     backgroundColor: 'var(--surface)',
@@ -469,7 +507,7 @@ export default function EventModal({
             {otherParticipantsRow()}
             {row('Ensemble', 'ensemble', 'text', true, true)}
             {row('Dress', 'dress', 'text', true, true)}
-            {row('Other', 'other', 'text', true, true)}
+            {otherRow()}
             {libraryFolderRow()}
           </div>
         </div>
