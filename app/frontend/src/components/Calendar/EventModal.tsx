@@ -275,7 +275,7 @@ export default function EventModal({
     );
   }
 
-  function dateRangeRow() {
+  function dateRangeRow(options?: { hideLabel?: boolean; className?: string }) {
     const startValue = form.dateISO || '';
     const endValue = form.endDateISO || '';
     const readOnly = role !== 'admin';
@@ -284,8 +284,8 @@ export default function EventModal({
     const endTimeValue = formatWallTime(endValue);
 
     return (
-      <div className="row-gap">
-        <label className="label">{t('event.dateTime')}</label>
+      <div className={['row-gap', options?.className].filter(Boolean).join(' ')}>
+        {!options?.hideLabel && <label className="label">{t('event.dateTime')}</label>}
         <div className="row date-range-row">
           <input
             className="input date-start"
@@ -493,11 +493,12 @@ export default function EventModal({
             {form.activity ? (
               <div className="event-heading-activity">{form.activity}</div>
             ) : null}
+            {dateRangeRow({ hideLabel: true, className: 'event-heading-datetime' })}
           </div>
         )}
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {dateRangeRow()}
+            {isAdmin && dateRangeRow()}
             {isAdmin && row(t('event.color'), 'color', 'color')}
             <hr className="modal-divider" />
             {isAdmin && row(t('event.title'), 'title', 'text', true)}

@@ -229,6 +229,26 @@ body {
   font-size: 15px;
   margin-top: 2px;
 }
+.event-heading-datetime {
+  padding-top: 8px;
+}
+.event-heading-datetime .date-range-row {
+  gap: 3px;
+  margin-left: 0;
+  padding-left: 0;
+}
+.event-heading-datetime .date-range-row .input,
+.event-heading-datetime .date-range-sep {
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+}
+.event-heading-datetime .date-range-row .input[type='datetime-local']::-webkit-datetime-edit,
+.event-heading-datetime .date-range-row .input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper,
+.event-heading-datetime .date-range-row .input[type='time']::-webkit-datetime-edit,
+.event-heading-datetime .date-range-row .input[type='time']::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
 .muted {
   color: var(--muted);
 }
