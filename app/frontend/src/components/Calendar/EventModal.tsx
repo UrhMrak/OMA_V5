@@ -182,6 +182,7 @@ export default function EventModal({
   function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text', tight = false) {
     const value = (form[key] as string) || '';
     const readOnly = role !== 'admin';
+    if (readOnly && !value) return null;
     const inputStyle = readOnly ? { border: 'none', background: 'transparent' } : {};
     const rowClass = tight ? 'row-gap tight' : 'row-gap';
     
@@ -365,7 +366,9 @@ export default function EventModal({
         textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
       }
     }, [value]);
-    
+
+    if (readOnly && !value) return null;
+
     return (
       <div className="row-gap tight">
         <label className="label">Program</label>
@@ -401,6 +404,8 @@ export default function EventModal({
         textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
       }
     }, [value]);
+
+    if (readOnly && !value) return null;
 
     return (
       <div className="row-gap tight">

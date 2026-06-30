@@ -536,15 +536,15 @@ body {
   line-height: 1.15;
   text-align: left;
   overflow: hidden;
-  padding: 1px 2px;
+  padding: 1px 1px;
 }
 .calendar-cell .pill .pill-top,
 .calendar-cell .pill .pill-title {
   display: block;
   max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .calendar-cell .pill .pill-top {
   font-size: 9px;
@@ -607,7 +607,7 @@ body {
   }
   .calendar-cell .pill {
     font-size: 9px;
-    padding: 1px 2px;
+    padding: 1px 1px;
   }
 }
 @media (max-width: 480px) {
@@ -688,9 +688,10 @@ body {
   gap: 8px;
 }
 .date-range-row .input {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
   min-width: 0;
+  text-align: left;
 }
 .date-range-row .date-start {
   flex: 2 1 0;
@@ -700,7 +701,7 @@ body {
 }
 .date-range-sep {
   flex: 0 0 auto;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
 }
 @media (min-width: 1024px) {
