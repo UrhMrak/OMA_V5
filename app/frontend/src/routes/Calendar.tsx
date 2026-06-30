@@ -410,21 +410,25 @@ export default function CalendarPage() {
                       <span className="calendar-week-badge">{row.weekNumber}</span>
                     ) : null}
                     {cell ? <div className="calendar-date">{cell.getDate()}</div> : null}
-                    {dayEvents.map((e) => (
-                      <button
-                        key={e.id}
-                        className="pill"
-                        style={{ borderColor: e.color, backgroundColor: getTransparentColor(e.color) }}
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          setSelected(e);
-                        }}
-                      >
-                        {viewMode === 'week' && formatPillTime(e.dateISO)
-                          ? `${formatPillTime(e.dateISO)} · ${e.title}`
-                          : e.title}
-                      </button>
-                    ))}
+                    {dayEvents.map((e) => {
+                      const topLine = [formatPillTime(e.dateISO), e.activity]
+                        .filter(Boolean)
+                        .join(' ');
+                      return (
+                        <button
+                          key={e.id}
+                          className="pill"
+                          style={{ borderColor: e.color, backgroundColor: getTransparentColor(e.color) }}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            setSelected(e);
+                          }}
+                        >
+                          {topLine ? <span className="pill-top">{topLine}</span> : null}
+                          <span className="pill-title">{e.title}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 );
               })}

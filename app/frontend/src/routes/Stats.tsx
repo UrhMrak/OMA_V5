@@ -25,14 +25,15 @@ type StatsColumn = {
 const COLUMNS: StatsColumn[] = [
   { key: 'dateTime', label: 'Date & time', value: formatDateTime, cellClassName: 'stats-nowrap' },
   { key: 'title', label: 'Title', value: (e) => e.title || '' },
+  { key: 'activity', label: 'Activity', value: (e) => e.activity || '' },
+  { key: 'venue', label: 'Venue', value: (e) => e.venue || '' },
   { key: 'program', label: 'Program', value: (e) => e.program || '', cellClassName: 'stats-program', truncate: true },
   { key: 'conductor', label: 'Conductor', value: (e) => e.conductor || '' },
   { key: 'soloists', label: 'Soloist', value: (e) => e.soloists || '' },
   { key: 'otherParticipants', label: 'Other participants', value: (e) => e.otherParticipants || '' },
   { key: 'ensemble', label: 'Ensemble', value: (e) => e.ensemble || '' },
-  { key: 'activity', label: 'Activity', value: (e) => e.activity || '' },
-  { key: 'venue', label: 'Venue', value: (e) => e.venue || '' },
   { key: 'dress', label: 'Dress', value: (e) => e.dress || '' },
+  { key: 'other', label: 'Other', value: (e) => e.other || '' },
 ];
 
 export default function Stats() {

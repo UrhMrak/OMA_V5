@@ -261,6 +261,17 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+.row-gap.tight {
+  gap: 2px;
+}
+.row-gap.tight .label {
+  margin-bottom: 0;
+}
+.modal-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 0;
+}
 .grid {
   display: grid;
   gap: 16px;
@@ -510,13 +521,28 @@ body {
 }
 .calendar-cell .pill {
   flex-shrink: 0;
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
   border-radius: 4px;
-  line-height: 1.25;
+  line-height: 1.2;
   text-align: left;
+  overflow: hidden;
+}
+.calendar-cell .pill .pill-top,
+.calendar-cell .pill .pill-title {
+  display: block;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.calendar-cell .pill .pill-top {
+  font-size: 10px;
+  opacity: 0.8;
+}
+.calendar-cell .pill .pill-title {
+  font-weight: 600;
 }
 .calendar-week-view .calendar-cell,
 .calendar-week-view .calendar-week-number {

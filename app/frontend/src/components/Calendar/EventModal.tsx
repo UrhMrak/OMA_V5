@@ -36,6 +36,21 @@ function rememberLastUsedColor(color?: string): void {
   }
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = (hex || '').trim().replace('#', '');
+  if (normalized.length !== 3 && normalized.length !== 6) {
+    return `rgba(37, 99, 235, ${alpha})`;
+  }
+  const full =
+    normalized.length === 3
+      ? normalized.split('').map((c) => c + c).join('')
+      : normalized;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
   const defaults: Partial<EventItem> = {
     color: getLastUsedColor(),
@@ -48,6 +63,7 @@ function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
     activity: '',
     venue: '',
     dress: '',
+    other: '',
     libraryPath: '',
     dateISO: nowFloatingISO(),
   };
@@ -161,10 +177,11 @@ export default function EventModal({
     navigate('/library', { state: { targetLibraryPath: path } });
   }
 
-  function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text') {
+  function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text', tight = false) {
     const value = (form[key] as string) || '';
     const readOnly = role !== 'admin';
     const inputStyle = readOnly ? { border: 'none' } : {};
+    const rowClass = tight ? 'row-gap tight' : 'row-gap';
     
     if (type === 'color') {
       if (readOnly) {
@@ -236,7 +253,7 @@ export default function EventModal({
     }
     
     return (
-      <div className="row-gap">
+      <div className={rowClass}>
         <label className="label">{label}</label>
         <input 
           className="input" 
@@ -350,7 +367,7 @@ export default function EventModal({
     }, [value]);
     
     return (
-      <div className="row-gap">
+      <div className="row-gap tight">
         <label className="label">Program</label>
         <textarea 
           className="textarea" 
@@ -386,7 +403,7 @@ export default function EventModal({
     }, [value]);
 
     return (
-      <div className="row-gap">
+      <div className="row-gap tight">
         <label className="label">Other Participants</label>
         <textarea
           className="textarea"
@@ -406,23 +423,31 @@ export default function EventModal({
     );
   }
 
+  const selectedColor = form.color || FALLBACK_EVENT_COLOR;
+  const modalStyle: CSSProperties = {
+    backgroundColor: 'var(--surface)',
+    backgroundImage: `linear-gradient(to bottom, ${hexToRgba(selectedColor, 0.55)} 0%, ${hexToRgba(selectedColor, 0)} 200px)`,
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <h3 className="h3">{isCreating ? 'Create Event' : 'Event Details'}</h3>
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {dateRangeRow()}
             {row('Color', 'color', 'color')}
-            {row('Title', 'title')}
+            <hr className="modal-divider" />
+            {row('Title', 'title', 'text', true)}
+            {row('Activity', 'activity', 'text', true)}
+            {row('Venue', 'venue', 'text', true)}
             {programRow()}
-            {row('Conductor', 'conductor')}
-            {row('Soloists', 'soloists')}
+            {row('Conductor', 'conductor', 'text', true)}
+            {row('Soloists', 'soloists', 'text', true)}
             {otherParticipantsRow()}
-            {row('Ensemble', 'ensemble')}
-            {row('Activity', 'activity')}
-            {row('Venue', 'venue')}
-            {row('Dress', 'dress')}
+            {row('Ensemble', 'ensemble', 'text', true)}
+            {row('Dress', 'dress', 'text', true)}
+            {row('Other', 'other', 'text', true)}
             {libraryFolderRow()}
           </div>
         </div>

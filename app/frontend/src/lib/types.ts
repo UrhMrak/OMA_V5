@@ -11,6 +11,7 @@ export type EventItem = {
   activity?: string;
   venue?: string;
   dress?: string;
+  other?: string;
   endDateISO?: string;
   libraryPath?: string;
 };

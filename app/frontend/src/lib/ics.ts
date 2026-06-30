@@ -30,13 +30,14 @@ function escapeICSText(value: string): string {
 
 function buildDescription(event: EventItem): string {
   const fields: Array<[string, string | undefined]> = [
+    ['Activity', event.activity],
     ['Program', event.program],
     ['Conductor', event.conductor],
     ['Soloists', event.soloists],
     ['Other participants', event.otherParticipants],
     ['Ensemble', event.ensemble],
-    ['Activity', event.activity],
     ['Dress', event.dress],
+    ['Other', event.other],
   ];
   return fields
     .filter(([, value]) => value && value.trim())
