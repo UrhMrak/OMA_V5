@@ -205,6 +205,14 @@ body {
   font-size: 18px;
   margin: 0 0 8px 0;
 }
+.event-heading-title {
+  margin: 0;
+}
+.event-heading-activity {
+  font-weight: 500;
+  font-size: 15px;
+  margin-top: 2px;
+}
 .muted {
   color: var(--muted);
 }
@@ -671,8 +679,29 @@ body {
 .modal-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-top: 12px;
   margin-bottom: 12px;
+}
+.date-range-row {
+  align-items: center;
+  gap: 8px;
+}
+.date-range-row .input {
+  font-weight: 700;
+  font-size: 15px;
+  min-width: 0;
+}
+.date-range-row .date-start {
+  flex: 2 1 0;
+}
+.date-range-row .date-end {
+  flex: 1 1 0;
+}
+.date-range-sep {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-size: 15px;
 }
 @media (min-width: 1024px) {
   .modal {
@@ -697,11 +726,7 @@ body.modal-open {
     flex-basis: 100%;
   }
   .modal .date-range-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .modal .date-range-row .date-range-field {
-    flex-basis: 100%;
+    flex-wrap: nowrap;
   }
 }
 .tree {

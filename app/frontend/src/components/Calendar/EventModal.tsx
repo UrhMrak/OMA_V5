@@ -279,56 +279,53 @@ export default function EventModal({
     return (
       <div className="row-gap">
         <label className="label">Date & Time</label>
-        <div className="row date-range-row" style={{ gap: 12 }}>
-          <div className="date-range-field" style={{ flex: 1 }}>
-            <input
-              className="input"
-              type="datetime-local"
-              value={startDateValue}
-              disabled={readOnly}
-              style={inputStyle}
-              onChange={(e) => {
-                const nextStartIso = inputValueToISO(e.target.value);
-                if (!nextStartIso) return;
-                const startMs = Date.parse(nextStartIso);
-                const startDatePart = e.target.value.slice(0, 10);
-                setForm((prev) => {
-                  const previousEndTime = formatWallTime(prev.endDateISO);
-                  let nextEndIso = prev.endDateISO;
+        <div className="row date-range-row">
+          <input
+            className="input date-start"
+            type="datetime-local"
+            value={startDateValue}
+            disabled={readOnly}
+            style={inputStyle}
+            onChange={(e) => {
+              const nextStartIso = inputValueToISO(e.target.value);
+              if (!nextStartIso) return;
+              const startMs = Date.parse(nextStartIso);
+              const startDatePart = e.target.value.slice(0, 10);
+              setForm((prev) => {
+                const previousEndTime = formatWallTime(prev.endDateISO);
+                let nextEndIso = prev.endDateISO;
 
-                  if (previousEndTime && startDatePart) {
-                    nextEndIso = inputValueToISO(`${startDatePart}T${previousEndTime}`) || nextEndIso;
-                  } else {
-                    nextEndIso = new Date(startMs + DEFAULT_EVENT_DURATION_MS).toISOString();
-                  }
+                if (previousEndTime && startDatePart) {
+                  nextEndIso = inputValueToISO(`${startDatePart}T${previousEndTime}`) || nextEndIso;
+                } else {
+                  nextEndIso = new Date(startMs + DEFAULT_EVENT_DURATION_MS).toISOString();
+                }
 
-                  return {
-                    ...prev,
-                    dateISO: nextStartIso,
-                    endDateISO: nextEndIso,
-                  };
-                });
-              }}
-            />
-          </div>
-          <div className="date-range-field" style={{ flex: 1 }}>
-            <input
-              className="input"
-              type="time"
-              value={endTimeValue}
-              disabled={readOnly}
-              style={inputStyle}
-              onChange={(e) => {
-                const time = e.target.value;
-                if (!time) return;
-                const startDatePart = (isoToInputValue(form.dateISO) || '').slice(0, 10);
-                if (!startDatePart) return;
-                const iso = inputValueToISO(`${startDatePart}T${time}`);
-                if (!iso) return;
-                setForm((prev) => ({ ...prev, endDateISO: iso }));
-              }}
-            />
-          </div>
+                return {
+                  ...prev,
+                  dateISO: nextStartIso,
+                  endDateISO: nextEndIso,
+                };
+              });
+            }}
+          />
+          <span className="date-range-sep" aria-hidden="true">-</span>
+          <input
+            className="input date-end"
+            type="time"
+            value={endTimeValue}
+            disabled={readOnly}
+            style={inputStyle}
+            onChange={(e) => {
+              const time = e.target.value;
+              if (!time) return;
+              const startDatePart = (isoToInputValue(form.dateISO) || '').slice(0, 10);
+              if (!startDatePart) return;
+              const iso = inputValueToISO(`${startDatePart}T${time}`);
+              if (!iso) return;
+              setForm((prev) => ({ ...prev, endDateISO: iso }));
+            }}
+          />
         </div>
       </div>
     );
@@ -435,16 +432,23 @@ export default function EventModal({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h3 className="h3">
-          {isCreating ? 'Create Event' : isAdmin ? 'Event Details' : form.title || 'Event'}
-        </h3>
+        {isAdmin ? (
+          <h3 className="h3">{isCreating ? 'Create Event' : 'Event Details'}</h3>
+        ) : (
+          <div className="event-heading">
+            <h3 className="h3 event-heading-title">{form.title || 'Event'}</h3>
+            {form.activity ? (
+              <div className="event-heading-activity">{form.activity}</div>
+            ) : null}
+          </div>
+        )}
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {dateRangeRow()}
             {isAdmin && row('Color', 'color', 'color')}
             <hr className="modal-divider" />
             {isAdmin && row('Title', 'title', 'text', true)}
-            {row('Activity', 'activity', 'text', true)}
+            {isAdmin && row('Activity', 'activity', 'text', true)}
             {row('Venue', 'venue', 'text', true)}
             {programRow()}
             {row('Conductor', 'conductor', 'text', true)}
