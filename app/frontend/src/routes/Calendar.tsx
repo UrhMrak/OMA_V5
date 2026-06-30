@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, Fragment } from 'react';
+import { useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import { EventItem } from '../lib/types';
 import { api } from '../lib/api';
 import EventModal from '../components/Calendar/EventModal';
@@ -230,6 +230,30 @@ export default function CalendarPage() {
     setAnim({ phase: 'exit', direction });
   };
 
+  const SWIPE_MIN_DISTANCE_PX = 50;
+  const PHONE_MAX_WIDTH_PX = 768;
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    if (typeof window === 'undefined' || window.innerWidth > PHONE_MAX_WIDTH_PX) {
+      touchStart.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start) return;
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE_PX || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    navigate(deltaX < 0 ? 'right' : 'left');
+  };
+
   const goToToday = () => {
     if (anim || isCurrent) return;
     if (viewMode === 'week') {
@@ -263,12 +287,13 @@ export default function CalendarPage() {
     }
   };
 
-  const animDirection =
-    anim && anim.phase === 'enter'
-      ? anim.direction === 'left'
+  const animDirection = anim
+    ? anim.phase === 'enter'
+      ? anim.direction
+      : anim.direction === 'left'
         ? 'right'
         : 'left'
-      : anim?.direction;
+    : undefined;
   const animClass = anim ? `calendar-anim-${anim.phase}-${animDirection}` : '';
 
   const monthRows = useMemo<CalendarRow[]>(() => {
@@ -379,7 +404,11 @@ export default function CalendarPage() {
           </button>
         </div>
       )}
-      <div className="calendar-anim-viewport">
+      <div
+        className="calendar-anim-viewport"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div
           className={`calendar-grid-with-weeks ${viewMode === 'week' ? 'calendar-week-view' : ''} ${animClass}`}
           onAnimationEnd={handleAnimationEnd}
