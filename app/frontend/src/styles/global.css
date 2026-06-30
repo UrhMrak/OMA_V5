@@ -655,6 +655,10 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: modalBackdropEnter 0.2s ease-out;
+}
+.modal-backdrop.closing {
+  animation: modalBackdropExit 0.2s ease-out forwards;
 }
 .modal {
   background: var(--surface);
@@ -669,6 +673,46 @@ body {
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
+  animation: modalEnter 0.3s ease-out;
+}
+.modal.closing {
+  animation: modalExit 0.2s ease-out forwards;
+}
+@keyframes modalBackdropEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalBackdropExit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes modalEnter {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes modalExit {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal-backdrop.closing,
+  .modal,
+  .modal.closing {
+    animation-duration: 0.01ms;
+  }
 }
 @media (min-width: 768px) {
   .modal {
@@ -692,6 +736,13 @@ body {
   font-size: 15px;
   min-width: 0;
   text-align: left;
+}
+.date-range-row .input:disabled {
+  flex: 0 0 auto;
+  width: auto;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  opacity: 1;
 }
 .date-range-row .date-start {
   flex: 2 1 0;

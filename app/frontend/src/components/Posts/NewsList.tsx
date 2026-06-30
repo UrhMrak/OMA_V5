@@ -4,6 +4,7 @@ import { API_BASE, api, authHeaders } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { usePageReady } from '../Layout/PageTransition';
 import { SkeletonCardList } from '../Layout/Skeleton';
+import PdfViewerModal from './PdfViewerModal';
 
 type PostAttachment = NonNullable<PostItem['attachments']>[number];
 
@@ -222,42 +223,14 @@ export default function NewsList() {
       </ul>
       )}
       {viewer && (
-        <div className="modal-backdrop" onClick={closeViewer}>
-          <div className="modal pdf-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pdf-modal-header">
-              <span className="card-title pdf-modal-title">{viewer.name}</span>
-              <div className="pdf-modal-actions">
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={downloadCurrentAttachment}
-                  disabled={!viewer.objectUrl}
-                >
-                  Download
-                </button>
-                <button
-                  type="button"
-                  className="icon-button"
-                  onClick={closeViewer}
-                  aria-label="Close"
-                  title="Close"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="pdf-modal-body">
-              {viewer.loading && <p className="muted">Loading PDF…</p>}
-              {viewer.error && <div className="error">{viewer.error}</div>}
-              {viewer.objectUrl && (
-                <iframe className="pdf-modal-frame" title={viewer.name} src={viewer.objectUrl} />
-              )}
-            </div>
-          </div>
-        </div>
+        <PdfViewerModal
+          name={viewer.name}
+          objectUrl={viewer.objectUrl}
+          error={viewer.error}
+          loading={viewer.loading}
+          onClose={closeViewer}
+          onDownload={downloadCurrentAttachment}
+        />
       )}
     </div>
   );

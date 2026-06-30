@@ -14,6 +14,7 @@ import {
 } from '../../lib/date';
 import { downloadICS } from '../../lib/ics';
 import DeleteIcon from '../icons/DeleteIcon';
+import { useModalClose } from '../Layout/useModalClose';
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 const FALLBACK_EVENT_COLOR = '#2563eb';
@@ -102,6 +103,7 @@ export default function EventModal({
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? undefined));
   const [isDeleting, setIsDeleting] = useState(false);
+  const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
     if (event) {
@@ -151,7 +153,7 @@ export default function EventModal({
     if (onSave) {
       await Promise.resolve(onSave());
     }
-    onClose();
+    requestClose();
   }
 
   async function handleDelete() {
@@ -164,7 +166,7 @@ export default function EventModal({
       if (onSave) {
         onSave();
       }
-      onClose();
+      requestClose();
     } catch (error) {
       console.error('Delete event failed:', error);
       const message = error instanceof Error && error.message ? error.message : 'Failed to delete event. Please try again.';
@@ -435,8 +437,12 @@ export default function EventModal({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={modalStyle} onClick={(e) => e.stopPropagation()}>
+    <div className={`modal-backdrop ${closing ? 'closing' : ''}`} onClick={requestClose}>
+      <div
+        className={`modal ${closing ? 'closing' : ''}`}
+        style={modalStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
         {isAdmin ? (
           <h3 className="h3">{isCreating ? 'Create Event' : 'Event Details'}</h3>
         ) : (
@@ -491,13 +497,13 @@ export default function EventModal({
                 className="btn"
                 onClick={() => {
                   onCopy(event);
-                  onClose();
+                  requestClose();
                 }}
               >
                 Copy
               </button>
             )}
-            <button className="btn" onClick={onClose}>Close</button>
+            <button className="btn" onClick={requestClose}>Close</button>
             {role === 'admin' && (
               <button className="btn primary" onClick={save}>
                 {isCreating ? 'Create' : 'Save'}
