@@ -40,8 +40,8 @@ export default function Library() {
     <div>
       <h2 className="h2">{t('library.title')}</h2>
       {!loaded || !tree ? (
-        <div className="skeleton-folder-grid">
-          {Array.from({ length: 8 }).map((_, index) => (
+        <div className="skeleton-folder-list">
+          {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="skeleton-folder" />
           ))}
         </div>

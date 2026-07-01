@@ -149,9 +149,30 @@ function RenameForm({
   );
 }
 
+const FOLDER_INDENT = 20;
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`folder-chevron${expanded ? ' expanded' : ''}`}
+      aria-hidden="true"
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 function FolderIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   );
@@ -261,7 +282,6 @@ function FolderItem({
   const { role } = useAuth();
   const { t } = useLanguage();
   const isAdmin = role === 'admin';
-  const compact = depth > 0;
   const targetSegment = initialSegments[0];
   const shouldExpand = targetSegment === node.name;
   const [isExpanded, setIsExpanded] = useState(shouldExpand);
@@ -296,9 +316,29 @@ function FolderItem({
     [onRefresh, t]
   );
 
+  const contentIndent = (depth + 1) * FOLDER_INDENT;
+
   return (
-    <div className={`folder-item${compact ? ' compact' : ''}`}>
-      <div className="folder-item-header" onClick={() => setIsExpanded(!isExpanded)}>
+    <div className="folder-tree-node">
+      <div
+        className="folder-row"
+        style={{ paddingLeft: depth * FOLDER_INDENT }}
+        onClick={() => setIsExpanded(!isExpanded)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        }}
+      >
+        {childCount > 0 ? (
+          <ChevronIcon expanded={isExpanded} />
+        ) : (
+          <span className="folder-chevron-placeholder" aria-hidden="true" />
+        )}
         <FolderIcon />
         <span className="folder-name">{node.name}</span>
         {childCount > 0 ? <span className="folder-count">({childCount})</span> : null}
@@ -333,9 +373,9 @@ function FolderItem({
         ) : null}
       </div>
       {isExpanded && (
-        <div className="folder-item-content">
+        <div className="folder-children">
           {isAdmin && isRenaming ? (
-            <div className="rename-section">
+            <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
               <RenameForm
                 node={node}
                 onRenamed={() => {
@@ -347,7 +387,7 @@ function FolderItem({
             </div>
           ) : null}
           {isAdmin && (
-            <div className="upload-section">
+            <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
               <UploadButton
                 folderPath={node.path || ''}
                 onUploaded={onRefresh}
@@ -355,22 +395,22 @@ function FolderItem({
               />
             </div>
           )}
-          {subFolders.length > 0 && (
-            <div className="folder-grid">
-              {subFolders.map((folder) => (
-                <FolderItem
-                  key={folder.path || folder.name}
-                  node={folder}
-                  onRefresh={onRefresh}
-                  onDownload={onDownload}
-                  initialSegments={childSegments}
-                  depth={depth + 1}
-                />
-              ))}
-            </div>
-          )}
+          {subFolders.map((folder) => (
+            <FolderItem
+              key={folder.path || folder.name}
+              node={folder}
+              onRefresh={onRefresh}
+              onDownload={onDownload}
+              initialSegments={childSegments}
+              depth={depth + 1}
+            />
+          ))}
           {files.map((file) => (
-            <div key={file.path || file.name} className="file-item-row">
+            <div
+              key={file.path || file.name}
+              className="file-item-row"
+              style={{ paddingLeft: contentIndent }}
+            >
               <button
                 type="button"
                 className="file-item file-download-button"
@@ -397,7 +437,7 @@ function FolderItem({
             </div>
           ))}
           {isAdmin && (
-            <div className="create-folder">
+            <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
               <CreateFolderForm parentPath={node.path || ''} onCreated={onRefresh} />
             </div>
           )}
@@ -494,7 +534,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
         ) : (
           <>
             {folderChildren.length > 0 && (
-              <div className="folder-grid">
+              <div className="folder-tree">
                 {folderChildren.map((folder) => (
                   <FolderItem
                     key={folder.path || folder.name}
@@ -509,7 +549,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
             {fileChildren.length > 0 && (
               <div className="file-list">
                 {fileChildren.map((file) => (
-                  <div key={file.path || file.name} className="file-item-row">
+                  <div key={file.path || file.name} className="file-item-row" style={{ paddingLeft: 0 }}>
                     <button
                       type="button"
                       className="file-item file-download-button"
@@ -537,7 +577,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
           </>
         )}
         {isAdmin && (
-          <div className="create-folder">
+          <div className="folder-admin-section">
             <CreateFolderForm parentPath="" onCreated={onRefresh} />
           </div>
         )}
