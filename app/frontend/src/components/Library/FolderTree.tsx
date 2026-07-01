@@ -8,11 +8,18 @@ import DeleteIcon from '../icons/DeleteIcon';
 const UPLOAD_ACCEPT =
   '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf,image/*';
 
-function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCreated: () => void }) {
+function CreateFolderForm({
+  parentPath,
+  onCreated,
+  onCancel,
+}: {
+  parentPath: string;
+  onCreated: () => void;
+  onCancel: () => void;
+}) {
   const { t } = useLanguage();
   const [folderName, setFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [showForm, setShowForm] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +30,6 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
       const fullPath = parentPath ? `${parentPath}/${folderName.trim()}` : folderName.trim();
       await api.post('/api/library/folder', { folder: fullPath });
       setFolderName('');
-      setShowForm(false);
       onCreated();
     } catch (err) {
       alert(err instanceof Error ? err.message : t('library.createFailed'));
@@ -32,30 +38,11 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
     }
   }
 
-  if (!showForm) {
-    return (
-      <button
-        type="button"
-        onClick={() => setShowForm(true)}
-        className="btn btn-sm"
-        style={{ marginTop: '0.5rem' }}
-      >
-        {t('library.createFolder')}
-      </button>
-    );
-  }
-
   return (
     <form
       onSubmit={handleSubmit}
-      style={{
-        marginTop: '0.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        alignItems: 'stretch',
-        maxWidth: 360,
-      }}
+      className="create-folder-form"
+      onClick={(event) => event.stopPropagation()}
     >
       <input
         type="text"
@@ -63,22 +50,13 @@ function CreateFolderForm({ parentPath, onCreated }: { parentPath: string; onCre
         onChange={(e) => setFolderName(e.target.value)}
         placeholder={t('library.folderName')}
         disabled={isCreating}
-        style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
         autoFocus
       />
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div className="create-folder-form-actions">
         <button type="submit" disabled={isCreating || !folderName.trim()} className="btn btn-sm">
           {t('library.create')}
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setShowForm(false);
-            setFolderName('');
-          }}
-          disabled={isCreating}
-          className="btn btn-sm"
-        >
+        <button type="button" onClick={onCancel} disabled={isCreating} className="btn btn-sm">
           {t('library.cancel')}
         </button>
       </div>
@@ -206,6 +184,15 @@ function RenameIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
 function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: string; onUploaded: () => void; onSuccess?: () => void }) {
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -286,6 +273,7 @@ function FolderItem({
   const shouldExpand = targetSegment === node.name;
   const [isExpanded, setIsExpanded] = useState(shouldExpand);
   const [isRenaming, setIsRenaming] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   useEffect(() => {
     if (shouldExpand) setIsExpanded(true);
@@ -342,38 +330,67 @@ function FolderItem({
         <FolderIcon />
         <span className="folder-name">{node.name}</span>
         {childCount > 0 ? <span className="folder-count">({childCount})</span> : null}
-        {isAdmin && node.path ? (
+        {isAdmin ? (
           <>
             <button
               type="button"
-              className="icon-button rename-button"
-              aria-label={t('library.renameAria', { name: node.name })}
-              title={t('library.renameFolder')}
+              className="icon-button add-folder-button"
+              aria-label={t('library.createFolderAria', { name: node.name })}
+              title={t('library.createFolder')}
               onClick={(event) => {
                 event.stopPropagation();
                 setIsExpanded(true);
-                setIsRenaming((prev) => !prev);
+                setIsCreatingFolder((prev) => !prev);
               }}
             >
-              <RenameIcon />
+              <PlusIcon />
             </button>
-            <button
-              type="button"
-              className="icon-button delete-button"
-              aria-label={t('library.deleteAria', { name: node.name })}
-              onClick={(event) => {
-                event.stopPropagation();
-                handleDelete(node);
-              }}
-              disabled={deletingThisNode}
-            >
-              <DeleteIcon />
-            </button>
+            {node.path ? (
+              <>
+                <button
+                  type="button"
+                  className="icon-button rename-button"
+                  aria-label={t('library.renameAria', { name: node.name })}
+                  title={t('library.renameFolder')}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsExpanded(true);
+                    setIsRenaming((prev) => !prev);
+                  }}
+                >
+                  <RenameIcon />
+                </button>
+                <button
+                  type="button"
+                  className="icon-button delete-button"
+                  aria-label={t('library.deleteAria', { name: node.name })}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleDelete(node);
+                  }}
+                  disabled={deletingThisNode}
+                >
+                  <DeleteIcon />
+                </button>
+              </>
+            ) : null}
           </>
         ) : null}
       </div>
       {isExpanded && (
         <div className="folder-children">
+          {isAdmin && isCreatingFolder ? (
+            <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
+              <CreateFolderForm
+                parentPath={node.path || ''}
+                onCreated={() => {
+                  setIsCreatingFolder(false);
+                  onRefresh();
+                }}
+                onCancel={() => setIsCreatingFolder(false)}
+              />
+            </div>
+          ) : null}
           {isAdmin && isRenaming ? (
             <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
               <RenameForm
@@ -436,11 +453,6 @@ function FolderItem({
               ) : null}
             </div>
           ))}
-          {isAdmin && (
-            <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
-              <CreateFolderForm parentPath={node.path || ''} onCreated={onRefresh} />
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -453,6 +465,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
   const isAdmin = role === 'admin';
   const [downloadError, setDownloadError] = useState('');
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
+  const [isCreatingRootFolder, setIsCreatingRootFolder] = useState(false);
   const initialSegments = useMemo(() => {
     if (!initialPath) return [] as string[];
     const cleaned = initialPath.replace(/^\/+|\/+$/g, '');
@@ -520,6 +533,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
   const children = node.children || [];
   const folderChildren = children.filter((c) => c.type === 'folder');
   const fileChildren = children.filter((c) => c.type === 'file');
+  const isEmpty = folderChildren.length === 0 && fileChildren.length === 0;
 
   const downloadNotice = downloadError ? (
     <div className="error" style={{ marginBottom: '8px' }}>{downloadError}</div>
@@ -529,8 +543,38 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
     <div className="library-container">
       {downloadNotice}
       <div className="year-section">
-        {folderChildren.length === 0 && fileChildren.length === 0 ? (
-          <p className="muted">{t('library.noFolders')}</p>
+        {isEmpty ? (
+          isAdmin ? (
+            <>
+              {isCreatingRootFolder ? (
+                <div className="folder-admin-section">
+                  <CreateFolderForm
+                    parentPath=""
+                    onCreated={() => {
+                      setIsCreatingRootFolder(false);
+                      onRefresh();
+                    }}
+                    onCancel={() => setIsCreatingRootFolder(false)}
+                  />
+                </div>
+              ) : null}
+              <div className="folder-row">
+                <span className="folder-chevron-placeholder" aria-hidden="true" />
+                <span className="folder-name muted">{t('library.noFolders')}</span>
+                <button
+                  type="button"
+                  className="icon-button add-folder-button"
+                  aria-label={t('library.createFolderRootAria')}
+                  title={t('library.createFolder')}
+                  onClick={() => setIsCreatingRootFolder(true)}
+                >
+                  <PlusIcon />
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="muted">{t('library.noFolders')}</p>
+          )
         ) : (
           <>
             {folderChildren.length > 0 && (
@@ -575,11 +619,6 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
               </div>
             )}
           </>
-        )}
-        {isAdmin && (
-          <div className="folder-admin-section">
-            <CreateFolderForm parentPath="" onCreated={onRefresh} />
-          </div>
         )}
       </div>
     </div>

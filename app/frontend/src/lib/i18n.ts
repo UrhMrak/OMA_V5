@@ -87,7 +87,9 @@ export const en = {
   },
   library: {
     title: 'Library',
-    createFolder: '+ Create Folder',
+    createFolder: 'New folder',
+    createFolderAria: 'Create subfolder in {name}',
+    createFolderRootAria: 'Create folder',
     folderName: 'Folder name',
     create: 'Create',
     cancel: 'Cancel',
@@ -340,7 +342,9 @@ export const is: Translations = {
   },
   library: {
     title: 'Safn',
-    createFolder: '+ Stofna m\u00F6ppu',
+    createFolder: 'N\u00FD m\u00F6ppu',
+    createFolderAria: 'Stofna undirm\u00F6ppu \u00ED {name}',
+    createFolderRootAria: 'Stofna m\u00F6ppu',
     folderName: 'M\u00F6ppuheiti',
     create: 'Stofna',
     cancel: 'H\u00E6tta vi\u00F0',
