@@ -30,8 +30,12 @@ create table if not exists public.library_items (
   type text not null check (type in ('folder', 'file')),
   storage_key text,
   size bigint,
+  mime_type text,
   created_at timestamptz not null default now()
 );
+
+-- Existing installs: add the column if the table predates it.
+alter table public.library_items add column if not exists mime_type text;
 
 create index if not exists library_items_path_idx on public.library_items (path);
 

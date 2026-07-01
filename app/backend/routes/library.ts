@@ -16,8 +16,14 @@ type LibraryRow = {
   type: 'folder' | 'file';
   storage_key: string | null;
   size: number | null;
+  mime_type?: string | null;
   created_at?: string;
 };
+
+const DEFAULT_FOLDERS = ['Music', 'Documents'];
+
+const INLINE_MIME_PREFIXES = ['image/'];
+const INLINE_MIME_TYPES = new Set(['application/pdf']);
 
 type LibraryNode = {
   name: string;
@@ -28,12 +34,14 @@ type LibraryNode = {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype !== 'application/pdf') return cb(new Error('Only PDFs allowed'));
-    cb(null, true);
-  },
-  limits: { fileSize: 25 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
+
+function isInlineMime(mime: string | null | undefined): boolean {
+  if (!mime) return false;
+  if (INLINE_MIME_TYPES.has(mime)) return true;
+  return INLINE_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix));
+}
 
 function baseName(p: string): string {
   const parts = p.split('/');
@@ -83,53 +91,21 @@ async function ensureFolders(folderPath: string) {
   await supabase.from(TABLE).upsert(folderRows(paths), { onConflict: 'path', ignoreDuplicates: true });
 }
 
-function getWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
-function getWeeksInYear(year: number): number {
-  const dec31 = new Date(year, 11, 31);
-  const weekNum = getWeekNumber(dec31);
-  return weekNum === 1 ? 52 : weekNum;
-}
-
-async function ensureWeekFolders() {
-  const currentYear = new Date().getFullYear();
-  const years = [currentYear - 1, currentYear, currentYear + 1];
-  const paths: string[] = [];
-  for (const year of years) {
-    paths.push(String(year));
-    const weeks = getWeeksInYear(year);
-    for (let week = 1; week <= weeks; week++) {
-      paths.push(`${year}/week ${week}`);
-    }
-  }
-  await supabase.from(TABLE).upsert(folderRows(paths), { onConflict: 'path', ignoreDuplicates: true });
+// Seed the default top-level folders, but only when the library is empty so
+// admin deletions/renames are never silently reverted.
+async function ensureDefaultFolders() {
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select('id', { count: 'exact', head: true });
+  if (error || (count ?? 0) > 0) return;
+  await supabase.from(TABLE).upsert(folderRows(DEFAULT_FOLDERS), {
+    onConflict: 'path',
+    ignoreDuplicates: true,
+  });
 }
 
 function sortChildren(children: LibraryNode[]) {
   children.sort((a, b) => {
-    const isYearA = a.type === 'folder' && /^\d{4}$/.test(a.name);
-    const isYearB = b.type === 'folder' && /^\d{4}$/.test(b.name);
-    const isWeekA = a.type === 'folder' && /^week \d+$/.test(a.name);
-    const isWeekB = b.type === 'folder' && /^week \d+$/.test(b.name);
-
-    if (isYearA && isYearB) return Number(a.name) - Number(b.name);
-    if (isYearA) return -1;
-    if (isYearB) return 1;
-
-    if (isWeekA && isWeekB) {
-      const numA = Number(a.name.match(/\d+$/)?.[0] || 0);
-      const numB = Number(b.name.match(/\d+$/)?.[0] || 0);
-      return numA - numB;
-    }
-    if (isWeekA) return -1;
-    if (isWeekB) return 1;
-
     if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
@@ -175,7 +151,7 @@ function buildTree(rows: LibraryRow[]): LibraryNode {
 }
 
 router.get('/tree', requireAuth, async (_req, res) => {
-  await ensureWeekFolders();
+  await ensureDefaultFolders();
   const { data, error } = await supabase.from(TABLE).select('*');
   if (error) return res.status(500).send(error.message);
   res.json(buildTree((data || []) as LibraryRow[]));
@@ -197,7 +173,7 @@ router.post(
       if (err) {
         if (err instanceof multer.MulterError) {
           if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ error: 'File too large. Maximum size is 25MB.' });
+            return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
           }
           return res.status(400).json({ error: `Upload error: ${err.message}` });
         }
@@ -236,6 +212,7 @@ router.post(
     const saved: Array<{ filename: string; size: number; path: string }> = [];
 
     for (const file of files) {
+      const mimeType = file.mimetype || 'application/octet-stream';
       let candidate = decodeUploadFilename(file.originalname);
       const dot = candidate.lastIndexOf('.');
       const stem = dot > 0 ? candidate.slice(0, dot) : candidate;
@@ -261,7 +238,7 @@ router.post(
 
       const { error: uploadError } = await supabase.storage
         .from(LIBRARY_BUCKET)
-        .upload(storageKeyValue, file.buffer, { contentType: 'application/pdf', upsert: true });
+        .upload(storageKeyValue, file.buffer, { contentType: mimeType, upsert: true });
       if (uploadError) return res.status(500).json({ error: uploadError.message });
 
       const { error: insertError } = await supabase.from(TABLE).insert({
@@ -271,6 +248,7 @@ router.post(
         type: 'file',
         storage_key: storageKeyValue,
         size: file.size,
+        mime_type: mimeType,
       });
       if (insertError) return res.status(500).json({ error: insertError.message });
 
@@ -315,6 +293,62 @@ router.delete('/item', requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/rename', requireAdmin, async (req, res) => {
+  const rel = normalizePath(String(req.body.path || ''));
+  const newName = String(req.body.newName || '').trim();
+  if (!rel) return res.status(400).send('path required');
+  if (!isSafePath(rel)) return res.status(400).send('Invalid path');
+  if (!newName) return res.status(400).send('newName required');
+  if (newName.includes('/') || newName.includes('..')) {
+    return res.status(400).send('Invalid name');
+  }
+
+  const parent = parentPath(rel);
+  const newPath = parent ? `${parent}/${newName}` : newName;
+  if (newPath === rel) return res.json({ ok: true });
+
+  const { data: item } = await supabase.from(TABLE).select('*').eq('path', rel).maybeSingle();
+  if (!item) return res.status(404).send('Not found');
+
+  const { data: conflict } = await supabase
+    .from(TABLE)
+    .select('id')
+    .eq('path', newPath)
+    .maybeSingle();
+  if (conflict) return res.status(409).send('An item with that name already exists');
+
+  if (item.type === 'folder') {
+    const { data: descendants } = await supabase
+      .from(TABLE)
+      .select('*')
+      .like('path', `${rel}/%`);
+    const rows = (descendants || []) as LibraryRow[];
+
+    const { error: renameError } = await supabase
+      .from(TABLE)
+      .update({ path: newPath, name: newName })
+      .eq('id', item.id);
+    if (renameError) return res.status(500).send(renameError.message);
+
+    for (const row of rows) {
+      const updatedPath = `${newPath}${row.path.slice(rel.length)}`;
+      const { error: childError } = await supabase
+        .from(TABLE)
+        .update({ path: updatedPath })
+        .eq('id', row.id);
+      if (childError) return res.status(500).send(childError.message);
+    }
+  } else {
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ path: newPath, name: newName })
+      .eq('id', item.id);
+    if (error) return res.status(500).send(error.message);
+  }
+
+  res.json({ ok: true, path: newPath });
+});
+
 router.get('/download', requireAuth, async (req, res) => {
   const rel = normalizePath(String(req.query.path || ''));
   if (!rel || !isSafePath(rel)) return res.status(400).send('Invalid path');
@@ -331,8 +365,10 @@ router.get('/download', requireAuth, async (req, res) => {
   if (error || !data) return res.status(404).send('Not found');
 
   const buffer = Buffer.from(await data.arrayBuffer());
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', contentDisposition('inline', item.name));
+  const mimeType = item.mime_type || 'application/octet-stream';
+  const disposition = isInlineMime(mimeType) ? 'inline' : 'attachment';
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Content-Disposition', contentDisposition(disposition, item.name));
   res.send(buffer);
 });
 

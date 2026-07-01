@@ -1,12 +1,9 @@
-import { useState, useEffect, useMemo, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { EventItem } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
-import { useNavigate } from 'react-router-dom';
 import {
-  getISOWeekNumber,
-  getISOWeekYear,
   isoToInputValue,
   inputValueToISO,
   isoToWallDate,
@@ -123,7 +120,6 @@ export default function EventModal({
   const { t, locale } = useLanguage();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
-  const navigate = useNavigate();
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? undefined));
   const [isDeleting, setIsDeleting] = useState(false);
@@ -145,29 +141,8 @@ export default function EventModal({
     };
   }, []);
 
-  const computedLibraryPath = useMemo(() => {
-    if (!form.dateISO) return '';
-    const date = isoToWallDate(form.dateISO);
-    if (Number.isNaN(date.getTime())) return '';
-    const isoWeek = getISOWeekNumber(date);
-    const isoYear = getISOWeekYear(date);
-    return `${isoYear}/week ${isoWeek}`;
-  }, [form.dateISO]);
-
-  useEffect(() => {
-    setForm((prev) => {
-      const current = prev.libraryPath || '';
-      if (current === computedLibraryPath) {
-        return prev;
-      }
-      return { ...prev, libraryPath: computedLibraryPath };
-    });
-  }, [computedLibraryPath]);
-
-  const libraryPath = form.libraryPath || computedLibraryPath || '';
-
   async function save() {
-    const payload = { ...form, libraryPath };
+    const payload = { ...form };
     rememberLastUsedColor(form.color);
     if (isCreating) {
       await api.post('/api/events', payload);
@@ -198,11 +173,6 @@ export default function EventModal({
     } finally {
       setIsDeleting(false);
     }
-  }
-
-  function handleOpenLibrary(path: string) {
-    if (!path) return;
-    navigate('/library', { state: { targetLibraryPath: path } });
   }
 
   function row(label: string, key: keyof EventItem, type: 'text' | 'color' | 'datetime-local' = 'text', tight = false, detailField = false) {
@@ -366,26 +336,6 @@ export default function EventModal({
     );
   }
 
-  function libraryFolderRow() {
-    const hasPath = Boolean(libraryPath);
-    return (
-      <div className="row-gap">
-        <label className="label">{t('event.musicLibrary')}</label>
-        <div className="row" style={{ alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            className="btn"
-            disabled={!hasPath}
-            onClick={() => handleOpenLibrary(libraryPath)}
-          >
-            {t('event.openFolder')}
-          </button>
-          <span className="small muted">{hasPath ? libraryPath : t('event.noFolder')}</span>
-        </div>
-      </div>
-    );
-  }
-
   function programRow() {
     const value = form.program || '';
     const readOnly = role !== 'admin';
@@ -494,7 +444,6 @@ export default function EventModal({
             {row(t('event.ensemble'), 'ensemble', 'text', true, true)}
             {row(t('event.dress'), 'dress', 'text', true, true)}
             {otherRow()}
-            {libraryFolderRow()}
           </div>
         </div>
         <div className="row-between" style={{ marginTop: 16 }}>

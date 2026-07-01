@@ -1000,6 +1000,26 @@ body.modal-open {
   color: #f59e0b;
   flex-shrink: 0;
 }
+.folder-item-header .icon-button svg {
+  color: inherit;
+}
+.folder-item-header .rename-button {
+  color: var(--muted);
+}
+.folder-item-header .rename-button:hover:not(:disabled),
+.folder-item-header .rename-button:focus-visible {
+  color: var(--primary);
+  background: var(--surface-hover);
+  outline: none;
+}
+.folder-item-header .delete-button {
+  color: #dc2626;
+}
+.rename-section {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
 .folder-item.compact .folder-item-header svg {
   transform: scale(0.85);
 }

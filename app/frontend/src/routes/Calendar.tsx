@@ -11,7 +11,6 @@ import {
   getLocalDateKey,
   getLocalDateKeyFromISO,
   getISOWeekNumber,
-  getISOWeekYear,
   addDays,
   getStartOfWeekMonday,
   formatWallTime,
@@ -45,9 +44,6 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
   const newStartISO = inputValueToISO(inputValue);
   const newEndISO = new Date(Date.parse(newStartISO) + durationMs).toISOString();
 
-  const newStartWall = isoToWallDate(newStartISO);
-  const libraryPath = `${getISOWeekYear(newStartWall)}/week ${getISOWeekNumber(newStartWall)}`;
-
   const { id, dateISO, endDateISO, libraryPath: _ignored, ...rest } = source;
   void id;
   void dateISO;
@@ -58,7 +54,6 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
     ...rest,
     dateISO: newStartISO,
     endDateISO: newEndISO,
-    libraryPath,
   };
 }
 
