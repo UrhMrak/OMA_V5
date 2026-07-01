@@ -35,6 +35,7 @@ export type LibraryNode = {
   name: string;
   type: 'folder' | 'file';
   path?: string; // relative path from uploads directory
+  mimeType?: string;
   children?: LibraryNode[]; // only for folders
 };
 

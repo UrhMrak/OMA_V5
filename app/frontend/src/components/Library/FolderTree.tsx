@@ -4,9 +4,22 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import DeleteIcon from '../icons/DeleteIcon';
+import PdfViewerModal from '../Posts/PdfViewerModal';
 
 const UPLOAD_ACCEPT =
   '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf,image/*';
+
+type FileViewer = {
+  name: string;
+  objectUrl: string | null;
+  error: string;
+  loading: boolean;
+};
+
+function isPdfFile(file: LibraryNode): boolean {
+  if (file.mimeType === 'application/pdf') return true;
+  return file.name.toLowerCase().endsWith('.pdf');
+}
 
 function CreateFolderForm({
   parentPath,
@@ -195,24 +208,47 @@ function PlusIcon() {
 
 function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: string; onUploaded: () => void; onSuccess?: () => void }) {
   const { t } = useLanguage();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  async function handleFiles(files: FileList | null) {
+  function getUploadRelativePath(file: File): string {
+    const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+    return relativePath?.replace(/\\/g, '/') || file.name;
+  }
+
+  function shouldIncludeFile(file: File, preserveStructure: boolean): boolean {
+    if (!preserveStructure) return true;
+    const relativePath = getUploadRelativePath(file);
+    const name = relativePath.split('/').pop() || relativePath;
+    return name !== '.DS_Store' && name !== 'Thumbs.db';
+  }
+
+  async function handleUpload(files: FileList | null, preserveStructure: boolean) {
     if (!files || files.length === 0) return;
+    const selected = Array.from(files).filter((file) => shouldIncludeFile(file, preserveStructure));
+    if (selected.length === 0) return;
+
     setBusy(true);
     setError('');
     setSuccess('');
     try {
       const form = new FormData();
       form.append('folder', folderPath);
-      for (const f of Array.from(files)) form.append('files', f);
+      for (const file of selected) {
+        if (preserveStructure) {
+          form.append('files', file, getUploadRelativePath(file));
+        } else {
+          form.append('files', file);
+        }
+      }
       await api.upload('/api/library/upload', form);
       setSuccess(t('library.uploadSuccess'));
       if (onSuccess) onSuccess();
-      if (inputRef.current) inputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (folderInputRef.current) folderInputRef.current.value = '';
       setTimeout(() => {
         onUploaded();
         setTimeout(() => setSuccess(''), 2000);
@@ -227,23 +263,41 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
 
   return (
     <div className="upload-button-container">
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={busy}
-        className="btn btn-sm"
-        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-      >
-        <UploadIcon />
-        {busy ? t('library.uploading') : t('library.upload')}
-      </button>
+      <div className="upload-button-row">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={busy}
+          className="btn btn-sm"
+        >
+          <UploadIcon />
+          {busy ? t('library.uploading') : t('library.upload')}
+        </button>
+        <button
+          type="button"
+          onClick={() => folderInputRef.current?.click()}
+          disabled={busy}
+          className="btn btn-sm"
+        >
+          <FolderIcon />
+          {busy ? t('library.uploading') : t('library.uploadFolder')}
+        </button>
+      </div>
       <input
-        ref={inputRef}
+        ref={fileInputRef}
         type="file"
         multiple
         accept={UPLOAD_ACCEPT}
         style={{ display: 'none' }}
-        onChange={(e) => handleFiles(e.target.files)}
+        onChange={(e) => handleUpload(e.target.files, false)}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        style={{ display: 'none' }}
+        onChange={(e) => handleUpload(e.target.files, true)}
+        {...({ webkitdirectory: 'true', directory: 'true' } as React.InputHTMLAttributes<HTMLInputElement>)}
       />
       {error && <div className="error" style={{ fontSize: '11px', marginTop: '4px' }}>{error}</div>}
       {success && !error && (
@@ -256,13 +310,13 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
 function FolderItem({
   node,
   onRefresh,
-  onDownload,
+  onOpenFile,
   initialSegments = [],
   depth = 0,
 }: {
   node: LibraryNode;
   onRefresh: () => void;
-  onDownload: (file: LibraryNode) => Promise<void> | void;
+  onOpenFile: (file: LibraryNode) => Promise<void> | void;
   initialSegments?: string[];
   depth?: number;
 }) {
@@ -417,7 +471,7 @@ function FolderItem({
               key={folder.path || folder.name}
               node={folder}
               onRefresh={onRefresh}
-              onDownload={onDownload}
+              onOpenFile={onOpenFile}
               initialSegments={childSegments}
               depth={depth + 1}
             />
@@ -430,8 +484,8 @@ function FolderItem({
             >
               <button
                 type="button"
-                className="file-item file-download-button"
-                onClick={() => onDownload(file)}
+                className="file-item file-open-button"
+                onClick={() => onOpenFile(file)}
                 disabled={Boolean(deletingPath && deletingPath === file.path)}
               >
                 <FileIcon />
@@ -463,9 +517,11 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
   const { role } = useAuth();
   const { t } = useLanguage();
   const isAdmin = role === 'admin';
-  const [downloadError, setDownloadError] = useState('');
+  const [openError, setOpenError] = useState('');
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [isCreatingRootFolder, setIsCreatingRootFolder] = useState(false);
+  const [viewer, setViewer] = useState<FileViewer | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const initialSegments = useMemo(() => {
     if (!initialPath) return [] as string[];
     const cleaned = initialPath.replace(/^\/+|\/+$/g, '');
@@ -479,37 +535,97 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
     return parts;
   }, [initialPath]);
 
-  const downloadFile = useCallback(async (file: LibraryNode) => {
+  function revokeObjectUrl() {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  }
+
+  useEffect(() => () => revokeObjectUrl(), []);
+
+  useEffect(() => {
+    if (!viewer) {
+      document.body.classList.remove('modal-open');
+      return;
+    }
+    document.body.classList.add('modal-open');
+    return () => document.body.classList.remove('modal-open');
+  }, [viewer]);
+
+  async function fetchFileBlob(file: LibraryNode): Promise<Blob> {
     if (!file.path) {
-      setDownloadError(t('library.filePathMissing'));
+      throw new Error(t('library.filePathMissing'));
+    }
+
+    const response = await fetch(`${API_BASE}/api/library/download?path=${encodeURIComponent(file.path)}`, {
+      headers: authHeaders(),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || t('library.downloadFailed'));
+    }
+
+    return response.blob();
+  }
+
+  function triggerBlobDownload(objectUrl: string, fileName: string) {
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  const openFile = useCallback(async (file: LibraryNode) => {
+    if (!file.path) {
+      setOpenError(t('library.filePathMissing'));
       return;
     }
 
-    try {
-      setDownloadError('');
-      const response = await fetch(`${API_BASE}/api/library/download?path=${encodeURIComponent(file.path)}`, {
-        headers: authHeaders(),
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || t('library.downloadFailed'));
+    if (!isPdfFile(file)) {
+      try {
+        setOpenError('');
+        const blob = await fetchFileBlob(file);
+        const objectUrl = URL.createObjectURL(blob);
+        triggerBlobDownload(objectUrl, file.name || 'download');
+        URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        const message = error instanceof Error && error.message ? error.message : t('library.downloadFailedRetry');
+        alert(message);
       }
+      return;
+    }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = file.name || 'download';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+    revokeObjectUrl();
+    setOpenError('');
+    setViewer({ name: file.name, objectUrl: null, error: '', loading: true });
+    try {
+      const blob = await fetchFileBlob(file);
+      const objectUrl = URL.createObjectURL(blob);
+      objectUrlRef.current = objectUrl;
+      setViewer({ name: file.name, objectUrl, error: '', loading: false });
     } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : t('library.downloadFailedRetry');
-      setDownloadError(message);
+      setViewer({
+        name: file.name,
+        objectUrl: null,
+        error: error instanceof Error && error.message ? error.message : t('news.loadPdfFailed'),
+        loading: false,
+      });
     }
   }, [t]);
+
+  function closeViewer() {
+    revokeObjectUrl();
+    setViewer(null);
+  }
+
+  function downloadCurrentFile() {
+    if (!viewer?.objectUrl) return;
+    triggerBlobDownload(viewer.objectUrl, viewer.name);
+  }
 
   const handleDeleteFile = useCallback(
     async (file: LibraryNode) => {
@@ -535,13 +651,13 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
   const fileChildren = children.filter((c) => c.type === 'file');
   const isEmpty = folderChildren.length === 0 && fileChildren.length === 0;
 
-  const downloadNotice = downloadError ? (
-    <div className="error" style={{ marginBottom: '8px' }}>{downloadError}</div>
+  const openNotice = openError ? (
+    <div className="error" style={{ marginBottom: '8px' }}>{openError}</div>
   ) : null;
 
   return (
     <div className="library-container">
-      {downloadNotice}
+      {openNotice}
       <div className="year-section">
         {isEmpty ? (
           isAdmin ? (
@@ -584,7 +700,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
                     key={folder.path || folder.name}
                     node={folder}
                     onRefresh={onRefresh}
-                    onDownload={downloadFile}
+                    onOpenFile={openFile}
                     initialSegments={initialSegments}
                   />
                 ))}
@@ -596,8 +712,8 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
                   <div key={file.path || file.name} className="file-item-row" style={{ paddingLeft: 0 }}>
                     <button
                       type="button"
-                      className="file-item file-download-button"
-                      onClick={() => downloadFile(file)}
+                      className="file-item file-open-button"
+                      onClick={() => openFile(file)}
                       disabled={Boolean(deletingPath && deletingPath === file.path)}
                     >
                       <FileIcon />
@@ -621,6 +737,16 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
           </>
         )}
       </div>
+      {viewer && (
+        <PdfViewerModal
+          name={viewer.name}
+          objectUrl={viewer.objectUrl}
+          error={viewer.error}
+          loading={viewer.loading}
+          onClose={closeViewer}
+          onDownload={downloadCurrentFile}
+        />
+      )}
     </div>
   );
 }

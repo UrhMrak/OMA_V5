@@ -1066,6 +1066,16 @@ body.modal-open {
   flex-direction: column;
   gap: 4px;
 }
+.upload-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.upload-button-row .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .file-list {
   display: flex;
   flex-direction: column;
@@ -1122,6 +1132,7 @@ body.modal-open {
   width: 14px;
   height: 14px;
 }
+.file-open-button,
 .file-download-button {
   background: none;
   border: none;
@@ -1131,6 +1142,7 @@ body.modal-open {
   color: inherit;
   cursor: pointer;
 }
+.file-open-button:focus-visible,
 .file-download-button:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;

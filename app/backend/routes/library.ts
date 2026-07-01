@@ -29,6 +29,7 @@ type LibraryNode = {
   name: string;
   type: 'folder' | 'file';
   path?: string;
+  mimeType?: string;
   children?: LibraryNode[];
 };
 
@@ -63,6 +64,63 @@ function isSafePath(p: string): boolean {
 
 function normalizePath(p: string): string {
   return p.replace(/^\/+|\/+$/g, '').trim();
+}
+
+function normalizeRelativeUploadPath(name: string): string {
+  return name.replace(/\\/g, '/').replace(/^\/+/, '').trim();
+}
+
+function isSafeRelativePath(p: string): boolean {
+  if (!p) return false;
+  const segments = p.split('/').filter(Boolean);
+  if (segments.length === 0) return false;
+  return segments.every((segment) => segment !== '.' && segment !== '..' && !segment.includes('\0'));
+}
+
+function resolveUploadTarget(
+  folder: string,
+  originalName: string
+): { targetFolder: string; fileName: string } | null {
+  const normalized = normalizeRelativeUploadPath(decodeUploadFilename(originalName));
+  if (!normalized || !isSafeRelativePath(normalized)) return null;
+
+  const segments = normalized.split('/').filter(Boolean);
+  const fileName = segments.pop();
+  if (!fileName) return null;
+
+  const subPath = segments.join('/');
+  const targetFolder = subPath ? `${folder}/${subPath}` : folder;
+  if (!isSafePath(targetFolder)) return null;
+
+  return { targetFolder, fileName };
+}
+
+function uniqueFileName(usedNames: Set<string>, fileName: string): string {
+  let candidate = fileName;
+  const dot = candidate.lastIndexOf('.');
+  const stem = dot > 0 ? candidate.slice(0, dot) : candidate;
+  const ext = dot > 0 ? candidate.slice(dot) : '';
+  let counter = 1;
+  while (usedNames.has(candidate)) {
+    candidate = `${stem}-${counter}${ext}`;
+    counter += 1;
+  }
+  usedNames.add(candidate);
+  return candidate;
+}
+
+function uniqueStorageKey(usedKeys: Set<string>, itemPath: string): string {
+  let storageKeyValue = toStorageKey(itemPath);
+  const keyDot = storageKeyValue.lastIndexOf('.');
+  const keyStem = keyDot > 0 ? storageKeyValue.slice(0, keyDot) : storageKeyValue;
+  const keyExt = keyDot > 0 ? storageKeyValue.slice(keyDot) : '';
+  let keyCounter = 1;
+  while (usedKeys.has(storageKeyValue)) {
+    storageKeyValue = `${keyStem}-${keyCounter}${keyExt}`;
+    keyCounter += 1;
+  }
+  usedKeys.add(storageKeyValue);
+  return storageKeyValue;
 }
 
 function folderRows(paths: string[]): LibraryRow[] {
@@ -137,7 +195,12 @@ function buildTree(rows: LibraryRow[]): LibraryNode {
     .forEach((row) => {
       const parent = ensureFolderNode(parentPath(row.path));
       parent.children = parent.children || [];
-      parent.children.push({ name: row.name, type: 'file', path: row.path });
+      parent.children.push({
+        name: row.name,
+        type: 'file',
+        path: row.path,
+        mimeType: row.mime_type || undefined,
+      });
     });
 
   const sortRecursive = (node: LibraryNode) => {
@@ -199,42 +262,46 @@ router.post(
 
     await ensureFolders(folder);
 
+    const existingPrefix = `${folder}/`;
     const { data: existing } = await supabase
       .from(TABLE)
-      .select('name, storage_key')
+      .select('path, name, storage_key')
       .eq('type', 'file')
-      .like('path', `${folder}/%`);
-    const usedNames = new Set<string>((existing || []).map((row: any) => row.name));
-    const usedKeys = new Set<string>(
-      (existing || []).map((row: any) => row.storage_key).filter(Boolean)
-    );
+      .like('path', `${existingPrefix}%`);
+    const usedNamesByFolder = new Map<string, Set<string>>();
+    const usedKeys = new Set<string>();
+
+    for (const row of (existing || []) as LibraryRow[]) {
+      const parent = parentPath(row.path);
+      if (!usedNamesByFolder.has(parent)) usedNamesByFolder.set(parent, new Set());
+      usedNamesByFolder.get(parent)!.add(row.name);
+      if (row.storage_key) usedKeys.add(row.storage_key);
+    }
 
     const saved: Array<{ filename: string; size: number; path: string }> = [];
+    const ensuredFolders = new Set<string>([folder]);
 
     for (const file of files) {
-      const mimeType = file.mimetype || 'application/octet-stream';
-      let candidate = decodeUploadFilename(file.originalname);
-      const dot = candidate.lastIndexOf('.');
-      const stem = dot > 0 ? candidate.slice(0, dot) : candidate;
-      const ext = dot > 0 ? candidate.slice(dot) : '';
-      let counter = 1;
-      while (usedNames.has(candidate)) {
-        candidate = `${stem}-${counter}${ext}`;
-        counter += 1;
+      const resolved = resolveUploadTarget(folder, file.originalname);
+      if (!resolved) {
+        return res.status(400).json({ error: 'Invalid file path in upload' });
       }
-      usedNames.add(candidate);
 
-      const itemPath = `${folder}/${candidate}`;
-      let storageKeyValue = toStorageKey(itemPath);
-      const keyDot = storageKeyValue.lastIndexOf('.');
-      const keyStem = keyDot > 0 ? storageKeyValue.slice(0, keyDot) : storageKeyValue;
-      const keyExt = keyDot > 0 ? storageKeyValue.slice(keyDot) : '';
-      let keyCounter = 1;
-      while (usedKeys.has(storageKeyValue)) {
-        storageKeyValue = `${keyStem}-${keyCounter}${keyExt}`;
-        keyCounter += 1;
+      const { targetFolder, fileName } = resolved;
+      if (!ensuredFolders.has(targetFolder)) {
+        await ensureFolders(targetFolder);
+        ensuredFolders.add(targetFolder);
       }
-      usedKeys.add(storageKeyValue);
+
+      if (!usedNamesByFolder.has(targetFolder)) {
+        usedNamesByFolder.set(targetFolder, new Set());
+      }
+      const usedNames = usedNamesByFolder.get(targetFolder)!;
+
+      const mimeType = file.mimetype || 'application/octet-stream';
+      const candidate = uniqueFileName(usedNames, fileName);
+      const itemPath = `${targetFolder}/${candidate}`;
+      const storageKeyValue = uniqueStorageKey(usedKeys, itemPath);
 
       const { error: uploadError } = await supabase.storage
         .from(LIBRARY_BUCKET)
