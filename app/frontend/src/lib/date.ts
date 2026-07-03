@@ -26,6 +26,27 @@ export function formatWallTime(iso: string | null | undefined): string {
   return `${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}`;
 }
 
+export function formatEventHeadingDateTime(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined,
+  locale?: string
+): string {
+  const start = isoToWallDate(startISO);
+  if (Number.isNaN(start.getTime())) return '';
+
+  const dateText = start.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
+  const startTime = formatWallTime(startISO);
+  const endTime = formatWallTime(endISO);
+
+  if (startTime && endTime) return `${dateText}, ${startTime} - ${endTime}`;
+  if (startTime) return `${dateText}, ${startTime}`;
+  return dateText;
+}
+
 export function isoToInputValue(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);

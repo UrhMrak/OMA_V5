@@ -6,9 +6,9 @@ import { api } from '../../lib/api';
 import {
   isoToInputValue,
   inputValueToISO,
-  isoToWallDate,
   nowFloatingISO,
   formatWallTime,
+  formatEventHeadingDateTime,
 } from '../../lib/date';
 import { downloadICS } from '../../lib/ics';
 import DeleteIcon from '../icons/DeleteIcon';
@@ -82,27 +82,6 @@ function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
     dateISO: new Date(startMs).toISOString(),
     endDateISO: new Date(endMs).toISOString(),
   };
-}
-
-function formatHeadingDateTime(
-  startISO: string | null | undefined,
-  endISO: string | null | undefined,
-  locale?: string
-): string {
-  const start = isoToWallDate(startISO);
-  if (Number.isNaN(start.getTime())) return '';
-
-  const dateText = start.toLocaleDateString(locale, {
-    day: 'numeric',
-    month: 'numeric',
-    year: 'numeric',
-  });
-  const startTime = formatWallTime(startISO);
-  const endTime = formatWallTime(endISO);
-
-  if (startTime && endTime) return `${dateText}, ${startTime} - ${endTime}`;
-  if (startTime) return `${dateText}, ${startTime}`;
-  return dateText;
 }
 
 export default function EventModal({
@@ -270,7 +249,7 @@ export default function EventModal({
   }
 
   function eventHeadingDateTime() {
-    const text = formatHeadingDateTime(form.dateISO, form.endDateISO, locale);
+    const text = formatEventHeadingDateTime(form.dateISO, form.endDateISO, locale);
     if (!text) return null;
     return <div className="event-heading-datetime">{text}</div>;
   }

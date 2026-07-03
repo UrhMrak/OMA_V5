@@ -7,16 +7,7 @@ import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 import EventModal from '../components/Calendar/EventModal';
 import { downloadCsv } from '../lib/csv';
-
-function formatDateTime(e: EventItem): string {
-  const start = new Date(e.dateISO);
-  if (Number.isNaN(start.getTime())) return '';
-  const startText = start.toLocaleString();
-  if (!e.endDateISO) return startText;
-  const end = new Date(e.endDateISO);
-  if (Number.isNaN(end.getTime())) return startText;
-  return `${startText} – ${end.toLocaleString()}`;
-}
+import { formatEventHeadingDateTime } from '../lib/date';
 
 type StatsColumn = {
   key: string;
@@ -26,8 +17,7 @@ type StatsColumn = {
   truncate?: boolean;
 };
 
-const COLUMNS: StatsColumn[] = [
-  { key: 'dateTime', labelKey: 'stats.col.dateTime', value: formatDateTime, cellClassName: 'stats-nowrap' },
+const OTHER_COLUMNS: StatsColumn[] = [
   { key: 'title', labelKey: 'stats.col.title', value: (e) => e.title || '' },
   { key: 'activity', labelKey: 'stats.col.activity', value: (e) => e.activity || '' },
   { key: 'venue', labelKey: 'stats.col.venue', value: (e) => e.venue || '' },
@@ -80,7 +70,7 @@ function eventInRange(
 
 export default function Stats() {
   const { events, loaded, loadEvents } = useEvents();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<DateRangeFilter>('all');
@@ -88,7 +78,20 @@ export default function Stats() {
   const [customEnd, setCustomEnd] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(COLUMNS.map((c) => [c.key, true]))
+    Object.fromEntries(['dateTime', ...OTHER_COLUMNS.map((c) => c.key)].map((key) => [key, true]))
+  );
+
+  const columns = useMemo<StatsColumn[]>(
+    () => [
+      {
+        key: 'dateTime',
+        labelKey: 'stats.col.dateTime',
+        value: (e) => formatEventHeadingDateTime(e.dateISO, e.endDateISO, locale),
+        cellClassName: 'stats-nowrap',
+      },
+      ...OTHER_COLUMNS,
+    ],
+    [locale]
   );
 
   useEffect(() => {
@@ -100,8 +103,8 @@ export default function Stats() {
   usePageReady(loaded);
 
   const shownColumns = useMemo(
-    () => COLUMNS.filter((c) => visibleColumns[c.key]),
-    [visibleColumns]
+    () => columns.filter((c) => visibleColumns[c.key]),
+    [columns, visibleColumns]
   );
 
   const rows = useMemo(() => {
@@ -110,13 +113,13 @@ export default function Stats() {
     return sorted.filter((event) => {
       if (!eventInRange(event, dateFilter, customStart, customEnd)) return false;
       if (!term) return true;
-      const haystack = COLUMNS.map((c) => c.value(event))
+      const haystack = columns.map((c) => c.value(event))
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [events, query, dateFilter, customStart, customEnd]);
+  }, [events, query, dateFilter, customStart, customEnd, columns]);
 
   function toggleColumn(key: string) {
     setVisibleColumns((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -194,7 +197,7 @@ export default function Stats() {
       </div>
       <div className="stats-columns">
         <span className="muted small">{t('stats.columns')}</span>
-        {COLUMNS.map((c) => (
+        {columns.map((c) => (
           <label key={c.key} className="stats-column-toggle">
             <input
               type="checkbox"
