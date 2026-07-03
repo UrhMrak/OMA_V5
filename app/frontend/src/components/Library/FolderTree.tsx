@@ -9,7 +9,7 @@ import {
   addRecentLibraryFile,
   getRecentLibraryFiles,
   pathToSegments,
-  searchLibraryFiles,
+  searchLibrary,
   type RecentLibraryFile,
 } from '../../lib/libraryUtils';
 
@@ -571,7 +571,7 @@ export default function FolderTree({
   }, [initialPath]);
 
   const searchResults = useMemo(
-    () => searchLibraryFiles(node, searchQuery),
+    () => searchLibrary(node, searchQuery),
     [node, searchQuery]
   );
 
@@ -737,32 +737,42 @@ export default function FolderTree({
             <p className="muted small">{t('library.searchNoResults')}</p>
           ) : (
             <ul className="library-search-list">
-              {searchResults.map((result) => (
-                <li key={result.file.path || result.file.name} className="library-search-item">
-                  <button
-                    type="button"
-                    className="library-search-file"
-                    onClick={() => openFile(result.file)}
-                  >
-                    <FileIcon />
-                    <span>{result.file.name}</span>
-                  </button>
-                  {result.parentPath ? (
+              {searchResults.map((result) => {
+                const isFolder = result.item.type === 'folder';
+                const itemPath = result.item.path || result.item.name;
+                return (
+                  <li key={itemPath} className="library-search-item">
                     <button
                       type="button"
-                      className="btn btn-sm library-search-folder-btn"
-                      onClick={() => navigateToFolder(result.parentPath)}
+                      className="library-search-file"
+                      onClick={() => {
+                        if (isFolder && result.item.path) {
+                          navigateToFolder(result.item.path);
+                          return;
+                        }
+                        openFile(result.item);
+                      }}
                     >
-                      {t('library.openFolderAction')}
+                      {isFolder ? <FolderIcon /> : <FileIcon />}
+                      <span>{result.item.name}</span>
                     </button>
-                  ) : null}
-                  {result.parentPath ? (
-                    <span className="muted small library-search-folder-label">
-                      {t('library.inFolder', { folder: result.parentPath })}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
+                    {!isFolder && result.parentPath ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm library-search-folder-btn"
+                        onClick={() => navigateToFolder(result.parentPath)}
+                      >
+                        {t('library.openFolderAction')}
+                      </button>
+                    ) : null}
+                    {result.parentPath ? (
+                      <span className="muted small library-search-folder-label">
+                        {t('library.inFolder', { folder: result.parentPath })}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

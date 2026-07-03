@@ -1,7 +1,7 @@
 import { LibraryNode } from './types';
 
 export type LibrarySearchResult = {
-  file: LibraryNode;
+  item: LibraryNode;
   parentPath: string;
 };
 
@@ -32,7 +32,7 @@ export function dirname(filePath: string): string {
   return parts.join('/');
 }
 
-export function searchLibraryFiles(node: LibraryNode, query: string): LibrarySearchResult[] {
+export function searchLibrary(node: LibraryNode, query: string): LibrarySearchResult[] {
   const term = query.trim().toLowerCase();
   if (!term) return [];
 
@@ -40,14 +40,13 @@ export function searchLibraryFiles(node: LibraryNode, query: string): LibrarySea
 
   function walk(current: LibraryNode, folderPath: string) {
     for (const child of current.children || []) {
-      if (child.type === 'file') {
-        if (child.name.toLowerCase().includes(term)) {
-          results.push({
-            file: child,
-            parentPath: folderPath || dirname(child.path || child.name),
-          });
-        }
-      } else if (child.type === 'folder') {
+      if (child.name.toLowerCase().includes(term)) {
+        results.push({
+          item: child,
+          parentPath: folderPath,
+        });
+      }
+      if (child.type === 'folder') {
         const nextPath = child.path || (folderPath ? `${folderPath}/${child.name}` : child.name);
         walk(child, nextPath);
       }
@@ -55,7 +54,12 @@ export function searchLibraryFiles(node: LibraryNode, query: string): LibrarySea
   }
 
   walk(node, '');
-  return results.sort((a, b) => a.file.name.localeCompare(b.file.name));
+  return results.sort((a, b) => {
+    if (a.item.type !== b.item.type) {
+      return a.item.type === 'folder' ? -1 : 1;
+    }
+    return a.item.name.localeCompare(b.item.name);
+  });
 }
 
 export function getRecentLibraryFiles(): RecentLibraryFile[] {

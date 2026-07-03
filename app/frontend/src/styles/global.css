@@ -1267,17 +1267,33 @@ body.modal-open {
 .pdf-modal-body {
   flex: 1;
   margin-top: 12px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
-.pdf-modal-frame {
-  flex: 1;
+.pdf-loading {
+  margin: 0 0 8px;
+}
+.pdf-pages-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   width: 100%;
-  border: none;
-  border-radius: 8px;
-  background: var(--card);
+}
+.pdf-page {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.pdf-page-canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  background: #fff;
 }
 .stats-search {
   max-width: 360px;
