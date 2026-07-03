@@ -22,7 +22,7 @@ export default function About() {
         <p className="muted">{about.intro}</p>
       </div>
 
-      <section id="help" className="card">
+      <section id="help">
         <h3 className="h3">{about.help.heading}</h3>
         <p className="muted small">{about.help.p1}</p>
         <p className="muted small">{about.help.p2}</p>
@@ -40,7 +40,7 @@ export default function About() {
         </p>
       </section>
 
-      <section id="privacy" className="card">
+      <section id="privacy">
         <h3 className="h3">{about.privacy.heading}</h3>
         <p className="muted small">{about.privacy.intro}</p>
         {about.privacy.sections.map((section) => (
@@ -55,7 +55,7 @@ export default function About() {
         </p>
       </section>
 
-      <section id="terms" className="card">
+      <section id="terms">
         <h3 className="h3">{about.terms.heading}</h3>
         <p className="muted small">{about.terms.intro}</p>
         {about.terms.sections.map((section) => (

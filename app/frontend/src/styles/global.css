@@ -205,12 +205,12 @@ body {
 .container {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 28px 20px 20px;
   width: 100%;
 }
 @media (max-width: 640px) {
   .container {
-    padding: 16px 14px;
+    padding: 22px 14px 16px;
   }
 }
 .h2 {
@@ -392,6 +392,13 @@ body {
 .calendar-view-toggle button.active {
   background: var(--primary);
   color: #fff;
+}
+.calendar-view-toggle--compact {
+  border-radius: 6px;
+}
+.calendar-view-toggle--compact button {
+  padding: 5px 10px;
+  font-size: 12px;
 }
 .calendar-grid {
   display: grid;
@@ -1521,6 +1528,17 @@ body.modal-open {
 .theme-switch:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+.theme-switch--compact {
+  width: 44px;
+  height: 26px;
+}
+.theme-switch--compact .theme-switch-thumb {
+  width: 18px;
+  height: 18px;
+}
+.theme-switch--compact.on .theme-switch-thumb {
+  left: 23px;
 }
 @media (prefers-reduced-motion: reduce) {
   .theme-switch,

@@ -30,7 +30,7 @@ export default function Settings() {
             role="switch"
             aria-checked={isDark}
             aria-label={t('settings.darkModeToggle')}
-            className={`theme-switch${isDark ? ' on' : ''}`}
+            className={`theme-switch theme-switch--compact${isDark ? ' on' : ''}`}
             onClick={toggleTheme}
           >
             <span className="theme-switch-thumb" />
@@ -52,7 +52,7 @@ export default function Settings() {
             role="switch"
             aria-checked={isCompact}
             aria-label={t('settings.compactToggle')}
-            className={`theme-switch${isCompact ? ' on' : ''}`}
+            className={`theme-switch theme-switch--compact${isCompact ? ' on' : ''}`}
             onClick={toggleEventSize}
           >
             <span className="theme-switch-thumb" />
@@ -69,22 +69,24 @@ export default function Settings() {
               {t('settings.languageDesc')}
             </p>
           </div>
-          <div className="calendar-view-toggle" role="group" aria-label={t('settings.language')}>
+          <div className="calendar-view-toggle calendar-view-toggle--compact" role="group" aria-label={t('settings.language')}>
             <button
               type="button"
               className={language === 'en' ? 'active' : ''}
               aria-pressed={language === 'en'}
+              aria-label={t('settings.english')}
               onClick={() => setLanguage('en')}
             >
-              {t('settings.english')}
+              EN
             </button>
             <button
               type="button"
               className={language === 'is' ? 'active' : ''}
               aria-pressed={language === 'is'}
+              aria-label={t('settings.icelandic')}
               onClick={() => setLanguage('is')}
             >
-              {t('settings.icelandic')}
+              IS
             </button>
           </div>
         </div>
