@@ -3,6 +3,7 @@ import { EventItem } from '../lib/types';
 import { useEvents } from '../context/EventsContext';
 import { useEventSize } from '../context/EventSizeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAppPreferences } from '../context/AppPreferencesContext';
 import { api } from '../lib/api';
 import EventModal from '../components/Calendar/EventModal';
 import { useAuth } from '../context/AuthContext';
@@ -58,6 +59,17 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
   };
 }
 
+function buildCreateDraftForDay(day: Date): Partial<EventItem> {
+  const now = new Date();
+  const start = new Date(day);
+  start.setHours(now.getHours(), now.getMinutes(), 0, 0);
+  const end = new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
+  return {
+    dateISO: start.toISOString(),
+    endDateISO: end.toISOString(),
+  };
+}
+
 const getTransparentColor = (color: string, alpha = 0.15) => {
   if (color.startsWith('#')) {
     const hex = color.slice(1);
@@ -88,8 +100,9 @@ export default function CalendarPage() {
   const { events, loadEvents } = useEvents();
   const { eventSize } = useEventSize();
   const { t, dict, locale } = useLanguage();
+  const { defaultCalendarView } = useAppPreferences();
   const [selected, setSelected] = useState<EventItem | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
+  const [createDraft, setCreateDraft] = useState<Partial<EventItem> | null>(null);
   const [copiedEvent, setCopiedEvent] = useState<EventItem | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -134,9 +147,19 @@ export default function CalendarPage() {
 
   const isPasteMode = role === 'admin' && copiedEvent !== null;
 
+  const handleDayClick = (day: Date) => {
+    if (isPasteMode) {
+      void pasteOnDay(day);
+      return;
+    }
+    if (role === 'admin') {
+      setCreateDraft(buildCreateDraftForDay(day));
+    }
+  };
+
   usePageReady(true);
   const now = new Date();
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [viewMode, setViewMode] = useState<ViewMode>(defaultCalendarView);
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [weekStart, setWeekStart] = useState(() => getStartOfWeekMonday(now));
@@ -382,7 +405,7 @@ export default function CalendarPage() {
           {role === 'admin' && (
             <button
               className="btn primary"
-              onClick={() => setIsCreating(true)}
+              onClick={() => setCreateDraft({})}
             >
               {t('calendar.addEvent')}
             </button>
@@ -450,12 +473,13 @@ export default function CalendarPage() {
                 const dayEvents = cell ? byDate[iso] || [] : [];
                 const isToday = cell ? iso === todayKey : false;
                 const canPasteHere = isPasteMode && !!cell;
+                const canCreateHere = role === 'admin' && !!cell && !isPasteMode;
                 return (
                   <div
                     key={dayIdx}
-                    className={`calendar-cell ${cell ? '' : 'empty'} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''}`}
-                    onClick={canPasteHere ? () => pasteOnDay(cell as Date) : undefined}
-                    role={canPasteHere ? 'button' : undefined}
+                    className={`calendar-cell ${cell ? '' : 'empty'} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''} ${canCreateHere ? 'calendar-cell-clickable' : ''}`}
+                    onClick={cell ? () => handleDayClick(cell as Date) : undefined}
+                    role={canPasteHere || canCreateHere ? 'button' : undefined}
                     title={canPasteHere ? t('calendar.pasteHere') : undefined}
                   >
                     {dayIdx === 0 ? (
@@ -522,13 +546,14 @@ export default function CalendarPage() {
           onCopy={handleCopyEvent}
         />
       )}
-      {isCreating && (
+      {createDraft !== null && (
         <EventModal
           event={null}
-          onClose={() => setIsCreating(false)}
+          draft={createDraft}
+          onClose={() => setCreateDraft(null)}
           onSave={() => {
             loadEvents();
-            setIsCreating(false);
+            setCreateDraft(null);
           }}
         />
       )}

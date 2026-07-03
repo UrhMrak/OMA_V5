@@ -107,11 +107,13 @@ function formatHeadingDateTime(
 
 export default function EventModal({
   event, 
+  draft,
   onClose, 
   onSave,
   onCopy
 }: { 
   event: EventItem | null; 
+  draft?: Partial<EventItem>;
   onClose: () => void;
   onSave?: () => void;
   onCopy?: (event: EventItem) => void;
@@ -121,7 +123,7 @@ export default function EventModal({
   const isAdmin = role === 'admin';
   const isCreating = event === null;
 
-  const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? undefined));
+  const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? draft));
   const [isDeleting, setIsDeleting] = useState(false);
   const { closing, requestClose } = useModalClose(onClose);
 
@@ -129,9 +131,9 @@ export default function EventModal({
     if (event) {
       setForm(normalizeForm(event));
     } else {
-      setForm(normalizeForm());
+      setForm(normalizeForm(draft));
     }
-  }, [event]);
+  }, [event, draft]);
 
   // Lock background scroll while modal is open
   useEffect(() => {

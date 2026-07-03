@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAppPreferences } from '../../context/AppPreferencesContext';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -11,6 +12,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { setSession } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { defaultLandingPage } = useAppPreferences();
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -18,7 +20,7 @@ export default function Login() {
     try {
       const res = await api.post<{ role: 'admin' | 'user'; token: string }>('/api/auth/login', { username, password });
       setSession({ username, role: res.role }, res.token);
-      navigate('/');
+      navigate(defaultLandingPage);
     } catch (err: any) {
       setError(err?.message || t('login.failed'));
     }

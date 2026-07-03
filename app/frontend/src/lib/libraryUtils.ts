@@ -1,0 +1,85 @@
+import { LibraryNode } from './types';
+
+export type LibrarySearchResult = {
+  file: LibraryNode;
+  parentPath: string;
+};
+
+export type RecentLibraryFile = {
+  path: string;
+  name: string;
+  openedAt: number;
+};
+
+const RECENT_KEY = 'oma:recentLibraryFiles';
+const MAX_RECENT = 8;
+
+export function pathToSegments(path: string): string[] {
+  const parts = path
+    .replace(/^\/+|\/+$/g, '')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+  if (parts[0]?.toLowerCase() === 'uploads') {
+    parts.shift();
+  }
+  return parts;
+}
+
+export function dirname(filePath: string): string {
+  const parts = pathToSegments(filePath);
+  parts.pop();
+  return parts.join('/');
+}
+
+export function searchLibraryFiles(node: LibraryNode, query: string): LibrarySearchResult[] {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const results: LibrarySearchResult[] = [];
+
+  function walk(current: LibraryNode, folderPath: string) {
+    for (const child of current.children || []) {
+      if (child.type === 'file') {
+        if (child.name.toLowerCase().includes(term)) {
+          results.push({
+            file: child,
+            parentPath: folderPath || dirname(child.path || child.name),
+          });
+        }
+      } else if (child.type === 'folder') {
+        const nextPath = child.path || (folderPath ? `${folderPath}/${child.name}` : child.name);
+        walk(child, nextPath);
+      }
+    }
+  }
+
+  walk(node, '');
+  return results.sort((a, b) => a.file.name.localeCompare(b.file.name));
+}
+
+export function getRecentLibraryFiles(): RecentLibraryFile[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RecentLibraryFile[];
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addRecentLibraryFile(file: LibraryNode): void {
+  if (typeof window === 'undefined' || !file.path) return;
+  try {
+    const existing = getRecentLibraryFiles().filter((item) => item.path !== file.path);
+    const next: RecentLibraryFile[] = [
+      { path: file.path, name: file.name, openedAt: Date.now() },
+      ...existing,
+    ].slice(0, MAX_RECENT);
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    // Ignore storage failures.
+  }
+}

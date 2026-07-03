@@ -5,6 +5,13 @@ import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import DeleteIcon from '../icons/DeleteIcon';
 import PdfViewerModal from '../Posts/PdfViewerModal';
+import {
+  addRecentLibraryFile,
+  getRecentLibraryFiles,
+  pathToSegments,
+  searchLibraryFiles,
+  type RecentLibraryFile,
+} from '../../lib/libraryUtils';
 
 const UPLOAD_ACCEPT =
   '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf,image/*';
@@ -311,19 +318,23 @@ function FolderItem({
   node,
   onRefresh,
   onOpenFile,
-  initialSegments = [],
+  onFolderActivate,
+  expandSegments = [],
+  activeFolderPath = '',
   depth = 0,
 }: {
   node: LibraryNode;
   onRefresh: () => void;
   onOpenFile: (file: LibraryNode) => Promise<void> | void;
-  initialSegments?: string[];
+  onFolderActivate: (path: string) => void;
+  expandSegments?: string[];
+  activeFolderPath?: string;
   depth?: number;
 }) {
   const { role } = useAuth();
   const { t } = useLanguage();
   const isAdmin = role === 'admin';
-  const targetSegment = initialSegments[0];
+  const targetSegment = expandSegments[0];
   const shouldExpand = targetSegment === node.name;
   const [isExpanded, setIsExpanded] = useState(shouldExpand);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -336,8 +347,9 @@ function FolderItem({
   const subFolders = (node.children || []).filter((c) => c.type === 'folder');
   const files = (node.children || []).filter((c) => c.type === 'file');
   const childCount = subFolders.length + files.length;
-  const childSegments = shouldExpand ? initialSegments.slice(1) : [];
+  const childSegments = shouldExpand ? expandSegments.slice(1) : [];
   const deletingThisNode = deletingPath === node.path;
+  const isActive = Boolean(node.path && node.path === activeFolderPath);
 
   const handleDelete = useCallback(
     async (target: LibraryNode) => {
@@ -363,9 +375,12 @@ function FolderItem({
   return (
     <div className="folder-tree-node">
       <div
-        className="folder-row"
+        className={`folder-row${isActive ? ' folder-row-active' : ''}`}
         style={{ paddingLeft: depth * FOLDER_INDENT }}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => {
+          setIsExpanded(!isExpanded);
+          if (node.path) onFolderActivate(node.path);
+        }}
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
@@ -373,6 +388,7 @@ function FolderItem({
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             setIsExpanded(!isExpanded);
+            if (node.path) onFolderActivate(node.path);
           }
         }}
       >
@@ -472,7 +488,9 @@ function FolderItem({
               node={folder}
               onRefresh={onRefresh}
               onOpenFile={onOpenFile}
-              initialSegments={childSegments}
+              onFolderActivate={onFolderActivate}
+              expandSegments={childSegments}
+              activeFolderPath={activeFolderPath}
               depth={depth + 1}
             />
           ))}
@@ -513,7 +531,19 @@ function FolderItem({
   );
 }
 
-export default function FolderTree({ node, onRefresh, initialPath }: { node: LibraryNode; onRefresh: () => void; initialPath?: string }) {
+export default function FolderTree({
+  node,
+  onRefresh,
+  initialPath,
+  rememberLastFolder = false,
+  onLastFolderChange,
+}: {
+  node: LibraryNode;
+  onRefresh: () => void;
+  initialPath?: string;
+  rememberLastFolder?: boolean;
+  onLastFolderChange?: (path: string) => void;
+}) {
   const { role } = useAuth();
   const { t } = useLanguage();
   const isAdmin = role === 'admin';
@@ -521,19 +551,52 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [isCreatingRootFolder, setIsCreatingRootFolder] = useState(false);
   const [viewer, setViewer] = useState<FileViewer | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [recentFiles, setRecentFiles] = useState<RecentLibraryFile[]>(() => getRecentLibraryFiles());
   const objectUrlRef = useRef<string | null>(null);
+
   const initialSegments = useMemo(() => {
     if (!initialPath) return [] as string[];
-    const cleaned = initialPath.replace(/^\/+|\/+$/g, '');
-    const parts = cleaned
-      .split('/')
-      .map((segment) => segment.trim())
-      .filter((segment) => segment.length > 0);
-    if (parts[0]?.toLowerCase() === 'uploads') {
-      parts.shift();
-    }
-    return parts;
+    return pathToSegments(initialPath);
   }, [initialPath]);
+
+  const [activeFolderPath, setActiveFolderPath] = useState(initialPath || '');
+  const [expandSegments, setExpandSegments] = useState<string[]>(initialSegments);
+
+  useEffect(() => {
+    if (initialPath) {
+      setActiveFolderPath(initialPath);
+      setExpandSegments(pathToSegments(initialPath));
+    }
+  }, [initialPath]);
+
+  const searchResults = useMemo(
+    () => searchLibraryFiles(node, searchQuery),
+    [node, searchQuery]
+  );
+
+  const breadcrumbSegments = useMemo(() => pathToSegments(activeFolderPath), [activeFolderPath]);
+
+  function rememberFolder(path: string) {
+    setActiveFolderPath(path);
+    if (rememberLastFolder && onLastFolderChange) {
+      onLastFolderChange(path);
+    }
+  }
+
+  function navigateToFolder(folderPath: string) {
+    setSearchQuery('');
+    setExpandSegments(pathToSegments(folderPath));
+    rememberFolder(folderPath);
+  }
+
+  function handleFolderActivate(path: string) {
+    rememberFolder(path);
+  }
+
+  function refreshRecentFiles() {
+    setRecentFiles(getRecentLibraryFiles());
+  }
 
   function revokeObjectUrl() {
     if (objectUrlRef.current) {
@@ -584,6 +647,9 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
       setOpenError(t('library.filePathMissing'));
       return;
     }
+
+    addRecentLibraryFile(file);
+    refreshRecentFiles();
 
     if (!isPdfFile(file)) {
       try {
@@ -658,6 +724,103 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
   return (
     <div className="library-container">
       {openNotice}
+      <input
+        className="input library-search"
+        type="search"
+        placeholder={t('library.search')}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      {searchQuery.trim() ? (
+        <div className="library-search-results">
+          {searchResults.length === 0 ? (
+            <p className="muted small">{t('library.searchNoResults')}</p>
+          ) : (
+            <ul className="library-search-list">
+              {searchResults.map((result) => (
+                <li key={result.file.path || result.file.name} className="library-search-item">
+                  <button
+                    type="button"
+                    className="library-search-file"
+                    onClick={() => openFile(result.file)}
+                  >
+                    <FileIcon />
+                    <span>{result.file.name}</span>
+                  </button>
+                  {result.parentPath ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm library-search-folder-btn"
+                      onClick={() => navigateToFolder(result.parentPath)}
+                    >
+                      {t('library.openFolderAction')}
+                    </button>
+                  ) : null}
+                  {result.parentPath ? (
+                    <span className="muted small library-search-folder-label">
+                      {t('library.inFolder', { folder: result.parentPath })}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <>
+          {recentFiles.length > 0 && (
+            <section className="library-recent">
+              <h3 className="h3 library-section-title">{t('library.recentFiles')}</h3>
+              <ul className="library-recent-list">
+                {recentFiles.map((recent) => (
+                  <li key={recent.path}>
+                    <button
+                      type="button"
+                      className="library-recent-item"
+                      onClick={() =>
+                        openFile({
+                          name: recent.name,
+                          path: recent.path,
+                          type: 'file',
+                        })
+                      }
+                    >
+                      <FileIcon />
+                      <span>{recent.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <nav className="library-breadcrumbs" aria-label={t('library.breadcrumbs')}>
+            <button
+              type="button"
+              className={`library-breadcrumb${breadcrumbSegments.length === 0 ? ' active' : ''}`}
+              onClick={() => navigateToFolder('')}
+            >
+              {t('library.breadcrumbsRoot')}
+            </button>
+            {breadcrumbSegments.map((segment, index) => {
+              const path = breadcrumbSegments.slice(0, index + 1).join('/');
+              const isLast = index === breadcrumbSegments.length - 1;
+              return (
+                <span key={path} className="library-breadcrumb-wrap">
+                  <span className="library-breadcrumb-sep" aria-hidden="true">/</span>
+                  <button
+                    type="button"
+                    className={`library-breadcrumb${isLast ? ' active' : ''}`}
+                    onClick={() => navigateToFolder(path)}
+                  >
+                    {segment}
+                  </button>
+                </span>
+              );
+            })}
+          </nav>
+        </>
+      )}
+      {!searchQuery.trim() && (
       <div className="year-section">
         {isEmpty ? (
           isAdmin ? (
@@ -701,7 +864,9 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
                     node={folder}
                     onRefresh={onRefresh}
                     onOpenFile={openFile}
-                    initialSegments={initialSegments}
+                    onFolderActivate={handleFolderActivate}
+                    expandSegments={expandSegments}
+                    activeFolderPath={activeFolderPath}
                   />
                 ))}
               </div>
@@ -737,6 +902,7 @@ export default function FolderTree({ node, onRefresh, initialPath }: { node: Lib
           </>
         )}
       </div>
+      )}
       {viewer && (
         <PdfViewerModal
           name={viewer.name}

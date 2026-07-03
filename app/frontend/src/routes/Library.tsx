@@ -4,6 +4,7 @@ import { LibraryNode } from '../lib/types';
 import { api } from '../lib/api';
 import FolderTree from '../components/Library/FolderTree';
 import { useLanguage } from '../context/LanguageContext';
+import { useAppPreferences } from '../context/AppPreferencesContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 
@@ -12,6 +13,7 @@ export default function Library() {
   const [loaded, setLoaded] = useState(false);
   const { t } = useLanguage();
   const location = useLocation();
+  const { rememberLastLibraryFolder, lastLibraryPath, setLastLibraryPath } = useAppPreferences();
 
   usePageReady(true);
 
@@ -20,13 +22,15 @@ export default function Library() {
     const statePath = state?.targetLibraryPath?.trim();
     const params = new URLSearchParams(location.search);
     const queryPath = params.get('path')?.trim();
-    return (queryPath || statePath || '') || undefined;
-  }, [location.search, location.state]);
+    if (queryPath || statePath) return (queryPath || statePath) || undefined;
+    if (rememberLastLibraryFolder && lastLibraryPath.trim()) return lastLibraryPath.trim();
+    return undefined;
+  }, [location.search, location.state, rememberLastLibraryFolder, lastLibraryPath]);
 
   async function refresh() {
     try {
-      const t = await api.get<LibraryNode>('/api/library/tree');
-      setTree(t);
+      const nextTree = await api.get<LibraryNode>('/api/library/tree');
+      setTree(nextTree);
     } finally {
       setLoaded(true);
     }
@@ -46,10 +50,14 @@ export default function Library() {
           ))}
         </div>
       ) : (
-        <FolderTree node={tree} onRefresh={refresh} initialPath={initialPath} />
+        <FolderTree
+          node={tree}
+          onRefresh={refresh}
+          initialPath={initialPath}
+          rememberLastFolder={rememberLastLibraryFolder}
+          onLastFolderChange={setLastLibraryPath}
+        />
       )}
     </div>
   );
 }
-
-
