@@ -17,6 +17,7 @@ import {
   isoToWallDate,
   inputValueToISO,
 } from '../lib/date';
+import { downloadMonthICS, downloadWeekICS } from '../lib/ics';
 
 type ViewMode = 'month' | 'week';
 type Direction = 'left' | 'right';
@@ -327,6 +328,32 @@ export default function CalendarPage() {
 
   const todayKey = getLocalDateKey(now);
 
+  const monthEvents = useMemo(() => {
+    return events
+      .filter((e) => {
+        const parsed = new Date(e.dateISO);
+        if (Number.isNaN(parsed.getTime())) return false;
+        return parsed.getUTCFullYear() === currentYear && parsed.getUTCMonth() === currentMonth;
+      })
+      .sort((a, b) => Date.parse(a.dateISO) - Date.parse(b.dateISO));
+  }, [events, currentYear, currentMonth]);
+
+  const weekDateKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (let i = 0; i < 7; i++) {
+      keys.add(getLocalDateKey(addDays(weekStart, i)));
+    }
+    return keys;
+  }, [weekStart]);
+
+  const weekEvents = useMemo(() => {
+    return events
+      .filter((e) => weekDateKeys.has(getLocalDateKeyFromISO(e.dateISO)))
+      .sort((a, b) => Date.parse(a.dateISO) - Date.parse(b.dateISO));
+  }, [events, weekDateKeys]);
+
+  const visiblePeriodEvents = viewMode === 'month' ? monthEvents : weekEvents;
+
   return (
     <div>
       <div className="calendar-toolbar">
@@ -460,6 +487,32 @@ export default function CalendarPage() {
             </Fragment>
           ))}
         </div>
+      </div>
+      <div className="calendar-period-footer">
+        <button
+          type="button"
+          className="btn"
+          disabled={visiblePeriodEvents.length === 0}
+          onClick={() => {
+            if (viewMode === 'month') {
+              downloadMonthICS(
+                monthEvents,
+                currentYear,
+                currentMonth,
+                dict.calendar.months[currentMonth],
+              );
+            } else {
+              downloadWeekICS(weekEvents, getISOWeekNumber(weekStart), weekStart.getFullYear());
+            }
+          }}
+        >
+          {viewMode === 'month'
+            ? t('calendar.addMonthToCalendar', {
+                month: dict.calendar.months[currentMonth],
+                count: monthEvents.length,
+              })
+            : t('calendar.addWeekToCalendar', { count: weekEvents.length })}
+        </button>
       </div>
       {selected && (
         <EventModal

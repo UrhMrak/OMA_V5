@@ -79,6 +79,8 @@ export const en = {
     cancel: 'Cancel',
     pasteHere: 'Paste copied event here',
     pasteFailed: 'Failed to paste event. Please try again.',
+    addMonthToCalendar: 'Add all {count} events in {month} to calendar',
+    addWeekToCalendar: 'Add all {count} events this week to calendar',
     months: [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December',
@@ -335,6 +337,8 @@ export const is: Translations = {
     cancel: 'H\u00E6tta vi\u00F0',
     pasteHere: 'L\u00EDma afrita\u00F0an vi\u00F0bur\u00F0 h\u00E9r',
     pasteFailed: 'Mist\u00F3kst a\u00F0 l\u00EDma vi\u00F0bur\u00F0. Reyndu aftur.',
+    addMonthToCalendar: 'B\u00E6ta \u00F6llum {count} vi\u00F0bur\u00F0um \u00ED {month} \u00ED dagatal',
+    addWeekToCalendar: 'B\u00E6ta \u00F6llum {count} vi\u00F0bur\u00F0um \u00FEessa viku \u00ED dagatal',
     months: [
       'Jan\u00FAar', 'Febr\u00FAar', 'Mars', 'Apr\u00EDl', 'Ma\u00ED', 'J\u00FAn\u00ED',
       'J\u00FAl\u00ED', '\u00C1g\u00FAst', 'September', 'Okt\u00F3ber', 'N\u00F3vember', 'Desember',

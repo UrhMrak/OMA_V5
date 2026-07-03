@@ -45,17 +45,12 @@ function buildDescription(event: EventItem): string {
     .join('\n');
 }
 
-export function buildICS(event: EventItem): string {
+function buildEventLines(event: EventItem, dtStamp: string): string[] {
   const dtStart = formatICSDate(event.dateISO);
   const dtEnd = formatICSDate(event.endDateISO);
-  const dtStamp = formatICSStamp(new Date());
   const description = buildDescription(event);
 
   const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Orchestra Manager//EN',
-    'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
     `UID:${event.id}@orchestra-manager`,
     `DTSTAMP:${dtStamp}`,
@@ -76,9 +71,52 @@ export function buildICS(event: EventItem): string {
     lines.push(`LOCATION:${escapeICSText(event.venue.trim())}`);
   }
 
-  lines.push('END:VEVENT', 'END:VCALENDAR');
+  lines.push('END:VEVENT');
+  return lines;
+}
 
+export function buildICS(event: EventItem): string {
+  const dtStamp = formatICSStamp(new Date());
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Orchestra Manager//EN',
+    'CALSCALE:GREGORIAN',
+    ...buildEventLines(event, dtStamp),
+    'END:VCALENDAR',
+  ];
   return lines.join('\r\n');
+}
+
+export function buildMultiEventICS(events: EventItem[]): string {
+  const dtStamp = formatICSStamp(new Date());
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Orchestra Manager//EN',
+    'CALSCALE:GREGORIAN',
+  ];
+  for (const event of events) {
+    lines.push(...buildEventLines(event, dtStamp));
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function sanitizeFileSegment(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'events';
+}
+
+function downloadICSFile(content: string, filename: string): void {
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 }
 
 function buildFileName(event: EventItem): string {
@@ -88,13 +126,14 @@ function buildFileName(event: EventItem): string {
 }
 
 export function downloadICS(event: EventItem): void {
-  const blob = new Blob([buildICS(event)], { type: 'text/calendar;charset=utf-8' });
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = buildFileName(event);
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(objectUrl);
+  downloadICSFile(buildICS(event), buildFileName(event));
+}
+
+export function downloadMonthICS(events: EventItem[], year: number, month: number, monthName: string): void {
+  const segment = sanitizeFileSegment(monthName);
+  downloadICSFile(buildMultiEventICS(events), `orchestra-events-${year}-${segment}.ics`);
+}
+
+export function downloadWeekICS(events: EventItem[], weekNumber: number, year: number): void {
+  downloadICSFile(buildMultiEventICS(events), `orchestra-events-week-${weekNumber}-${year}.ics`);
 }
