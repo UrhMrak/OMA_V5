@@ -237,13 +237,16 @@ export default function EventModal({
     return (
       <div className={rowClass}>
         <label className="label">{label}</label>
-        <AutoResizeTextarea
-          className="textarea"
-          value={String(value)}
-          readOnly={readOnly}
-          style={inputStyle}
-          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        />
+        {readOnly ? (
+          <div className="event-readonly-value">{String(value)}</div>
+        ) : (
+          <AutoResizeTextarea
+            className="textarea"
+            value={String(value)}
+            style={inputStyle}
+            onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+          />
+        )}
       </div>
     );
   }
@@ -329,13 +332,16 @@ export default function EventModal({
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.program')}</label>
-        <AutoResizeTextarea
-          className="textarea"
-          value={value}
-          readOnly={readOnly}
-          style={textareaStyle}
-          onChange={(e) => setForm({ ...form, program: e.target.value })}
-        />
+        {readOnly ? (
+          <div className="event-readonly-value">{value}</div>
+        ) : (
+          <AutoResizeTextarea
+            className="textarea"
+            value={value}
+            style={textareaStyle}
+            onChange={(e) => setForm({ ...form, program: e.target.value })}
+          />
+        )}
       </div>
     );
   }
@@ -352,13 +358,16 @@ export default function EventModal({
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.otherParticipants')}</label>
-        <AutoResizeTextarea
-          className="textarea"
-          value={value}
-          readOnly={readOnly}
-          style={textareaStyle}
-          onChange={(e) => setForm({ ...form, otherParticipants: e.target.value })}
-        />
+        {readOnly ? (
+          <div className="event-readonly-value">{value}</div>
+        ) : (
+          <AutoResizeTextarea
+            className="textarea"
+            value={value}
+            style={textareaStyle}
+            onChange={(e) => setForm({ ...form, otherParticipants: e.target.value })}
+          />
+        )}
       </div>
     );
   }
@@ -375,13 +384,16 @@ export default function EventModal({
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.other')}</label>
-        <AutoResizeTextarea
-          className="textarea"
-          value={value}
-          readOnly={readOnly}
-          style={textareaStyle}
-          onChange={(e) => setForm({ ...form, other: e.target.value })}
-        />
+        {readOnly ? (
+          <div className="event-readonly-value">{value}</div>
+        ) : (
+          <AutoResizeTextarea
+            className="textarea"
+            value={value}
+            style={textareaStyle}
+            onChange={(e) => setForm({ ...form, other: e.target.value })}
+          />
+        )}
       </div>
     );
   }

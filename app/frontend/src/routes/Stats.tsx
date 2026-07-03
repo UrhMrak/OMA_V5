@@ -18,16 +18,16 @@ type StatsColumn = {
 };
 
 const OTHER_COLUMNS: StatsColumn[] = [
-  { key: 'title', labelKey: 'stats.col.title', value: (e) => e.title || '' },
-  { key: 'activity', labelKey: 'stats.col.activity', value: (e) => e.activity || '' },
-  { key: 'venue', labelKey: 'stats.col.venue', value: (e) => e.venue || '' },
+  { key: 'title', labelKey: 'stats.col.title', value: (e) => e.title || '', cellClassName: 'stats-text' },
+  { key: 'activity', labelKey: 'stats.col.activity', value: (e) => e.activity || '', cellClassName: 'stats-text' },
+  { key: 'venue', labelKey: 'stats.col.venue', value: (e) => e.venue || '', cellClassName: 'stats-text' },
   { key: 'program', labelKey: 'stats.col.program', value: (e) => e.program || '', cellClassName: 'stats-program', truncate: true },
-  { key: 'conductor', labelKey: 'stats.col.conductor', value: (e) => e.conductor || '' },
-  { key: 'soloists', labelKey: 'stats.col.soloists', value: (e) => e.soloists || '' },
-  { key: 'otherParticipants', labelKey: 'stats.col.otherParticipants', value: (e) => e.otherParticipants || '' },
-  { key: 'ensemble', labelKey: 'stats.col.ensemble', value: (e) => e.ensemble || '' },
-  { key: 'dress', labelKey: 'stats.col.dress', value: (e) => e.dress || '' },
-  { key: 'other', labelKey: 'stats.col.other', value: (e) => e.other || '' },
+  { key: 'conductor', labelKey: 'stats.col.conductor', value: (e) => e.conductor || '', cellClassName: 'stats-text' },
+  { key: 'soloists', labelKey: 'stats.col.soloists', value: (e) => e.soloists || '', cellClassName: 'stats-text' },
+  { key: 'otherParticipants', labelKey: 'stats.col.otherParticipants', value: (e) => e.otherParticipants || '', cellClassName: 'stats-text' },
+  { key: 'ensemble', labelKey: 'stats.col.ensemble', value: (e) => e.ensemble || '', cellClassName: 'stats-text' },
+  { key: 'dress', labelKey: 'stats.col.dress', value: (e) => e.dress || '', cellClassName: 'stats-text', truncate: true },
+  { key: 'other', labelKey: 'stats.col.other', value: (e) => e.other || '', cellClassName: 'stats-text', truncate: true },
 ];
 
 type DateRangeFilter = 'all' | 'thisMonth' | 'next30' | 'custom';
