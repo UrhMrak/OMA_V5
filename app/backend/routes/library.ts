@@ -21,6 +21,8 @@ type LibraryRow = {
 };
 
 const DEFAULT_FOLDERS = ['Music', 'Documents'];
+const MAX_UPLOAD_FILE_SIZE_MB = 500;
+const MAX_UPLOAD_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024;
 
 const INLINE_MIME_PREFIXES = ['image/'];
 const INLINE_MIME_TYPES = new Set(['application/pdf']);
@@ -35,7 +37,7 @@ type LibraryNode = {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: MAX_UPLOAD_FILE_SIZE_BYTES },
 });
 
 function isInlineMime(mime: string | null | undefined): boolean {
@@ -236,7 +238,9 @@ router.post(
       if (err) {
         if (err instanceof multer.MulterError) {
           if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
+            return res.status(400).json({
+              error: `File too large. Maximum size is ${MAX_UPLOAD_FILE_SIZE_MB}MB.`,
+            });
           }
           return res.status(400).json({ error: `Upload error: ${err.message}` });
         }

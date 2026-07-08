@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PostItem } from '../../lib/types';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,10 @@ type AttachmentViewer = {
   loading: boolean;
 };
 
+const INITIAL_VISIBLE_COUNT = 1;
+const POSTS_PER_LOAD = 1;
+const SMALL_POST_MIN_HEIGHT = 120;
+
 export default function NewsList() {
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [title, setTitle] = useState('');
@@ -25,7 +29,12 @@ export default function NewsList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [viewer, setViewer] = useState<AttachmentViewer | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
   const objectUrlRef = useRef<string | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const loadMoreRef = useRef<HTMLButtonElement | null>(null);
+  const initialExpansionDoneRef = useRef(false);
+  const wasIntersectingRef = useRef<boolean | null>(null);
   const { role } = useAuth();
   const { t } = useLanguage();
 
@@ -144,6 +153,71 @@ export default function NewsList() {
 
   useEffect(() => { refresh(); }, []);
 
+  useEffect(() => {
+    initialExpansionDoneRef.current = false;
+    wasIntersectingRef.current = null;
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  }, [posts]);
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => {
+      if (prev >= posts.length) return prev;
+      return Math.min(prev + POSTS_PER_LOAD, posts.length);
+    });
+  }, [posts.length]);
+
+  useEffect(() => {
+    if (!loaded || initialExpansionDoneRef.current || posts.length === 0) return;
+
+    const list = listRef.current;
+    if (!list) return;
+
+    const frame = requestAnimationFrame(() => {
+      const cards = list.querySelectorAll(':scope > .card');
+      let totalHeight = 0;
+      cards.forEach((card) => {
+        totalHeight += card.getBoundingClientRect().height;
+      });
+
+      if (totalHeight < SMALL_POST_MIN_HEIGHT && visibleCount < posts.length) {
+        setVisibleCount((prev) => prev + 1);
+        return;
+      }
+
+      initialExpansionDoneRef.current = true;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [loaded, posts.length, visibleCount]);
+
+  useEffect(() => {
+    const button = loadMoreRef.current;
+    if (!button || visibleCount >= posts.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+
+        const isIntersecting = entry.isIntersecting;
+        if (wasIntersectingRef.current === null) {
+          wasIntersectingRef.current = isIntersecting;
+          return;
+        }
+
+        if (isIntersecting && !wasIntersectingRef.current) {
+          loadMore();
+        }
+
+        wasIntersectingRef.current = isIntersecting;
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [visibleCount, posts.length, loadMore]);
+
   async function addPost() {
     if (!title.trim()) return;
     const form = new FormData();
@@ -202,8 +276,8 @@ export default function NewsList() {
       {!loaded ? (
         <SkeletonCardList count={3} />
       ) : (
-      <ul className="card-list">
-        {posts.map((p) => (
+      <ul className="card-list" ref={listRef}>
+        {posts.slice(0, visibleCount).map((p) => (
           <li key={p.id} className="card">
             <div className="card-title">{p.title}</div>
             <div className="muted small">{new Date(p.createdAtISO).toLocaleString()}</div>
@@ -234,6 +308,16 @@ export default function NewsList() {
           </li>
         ))}
       </ul>
+      )}
+      {loaded && visibleCount < posts.length && (
+        <button
+          ref={loadMoreRef}
+          type="button"
+          className="btn news-load-more"
+          onClick={loadMore}
+        >
+          {t('news.loadMore')}
+        </button>
       )}
       {viewer && (
         <PdfViewerModal

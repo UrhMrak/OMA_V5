@@ -115,7 +115,7 @@ export const en = {
     uploadFolder: 'Upload folder',
     uploading: 'Uploading\u2026',
     uploadSuccess: 'Uploaded successfully',
-    uploadFailed: 'Upload failed. Files up to 50MB are allowed.',
+    uploadFailed: 'Upload failed. Files up to 500MB are allowed.',
     deleteConfirm: 'Delete "{name}"? This cannot be undone.',
     deleteFailed: 'Delete failed. Please try again.',
     deleteAria: 'Delete {name}',
@@ -172,6 +172,7 @@ export const en = {
     loadFileFailed: 'Failed to load file.',
     downloadFileFailed: 'Failed to download file.',
     loadPdfFailed: 'Failed to load PDF.',
+    loadMore: 'Load more',
   },
   pdf: {
     download: 'Download',
@@ -400,7 +401,7 @@ export const is: Translations = {
     uploadFolder: 'Hla\u00F0a upp m\u00F6ppu',
     uploading: 'Hle\u00F0 upp\u2026',
     uploadSuccess: 'Upphle\u00F0sla t\u00F3kst',
-    uploadFailed: 'Upphle\u00F0sla mist\u00F3kst. Skr\u00E1r allt a\u00F0 50MB eru leyf\u00F0ar.',
+    uploadFailed: 'Upphle\u00F0sla mist\u00F3kst. Skr\u00E1r allt a\u00F0 500MB eru leyf\u00F0ar.',
     deleteConfirm: 'Ey\u00F0a \u201E{name}\u201C? \u00DEetta er ekki h\u00E6gt a\u00F0 afturkalla.',
     deleteFailed: 'Ey\u00F0ing mist\u00F3kst. Reyndu aftur.',
     deleteAria: 'Ey\u00F0a {name}',
@@ -457,6 +458,7 @@ export const is: Translations = {
     loadFileFailed: 'Mist\u00F3kst a\u00F0 hla\u00F0a skr\u00E1.',
     downloadFileFailed: 'Mist\u00F3kst a\u00F0 s\u00E6kja skr\u00E1.',
     loadPdfFailed: 'Mist\u00F3kst a\u00F0 hla\u00F0a PDF.',
+    loadMore: 'S\u00FDna meira',
   },
   pdf: {
     download: 'S\u00E6kja',
