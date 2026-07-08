@@ -1386,6 +1386,45 @@ body.modal-open {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+@media (max-width: 520px) {
+  .settings-preference-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .settings-preference-row > div:first-child {
+    min-width: 0;
+  }
+  .settings-preference-row .calendar-view-toggle {
+    align-self: stretch;
+    max-width: 100%;
+  }
+  .settings-preference-row .calendar-view-toggle:not(.settings-landing-toggle) {
+    display: flex;
+  }
+  .settings-preference-row .calendar-view-toggle:not(.settings-landing-toggle) button {
+    flex: 1;
+    text-align: center;
+  }
+  .settings-landing-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+  }
+  .settings-landing-toggle button {
+    text-align: center;
+    min-width: 0;
+  }
+  .settings-landing-toggle button + button {
+    border-left: none;
+  }
+  .settings-landing-toggle button:nth-child(odd) {
+    border-right: 1px solid var(--border);
+  }
+  .settings-landing-toggle button:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+}
 .calendar-cell-clickable {
   cursor: pointer;
 }
