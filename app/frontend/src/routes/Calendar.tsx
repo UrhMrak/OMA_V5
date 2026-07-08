@@ -17,6 +17,7 @@ import {
   formatWallTime,
   isoToWallDate,
   inputValueToISO,
+  defaultNewEventRangeISO,
 } from '../lib/date';
 import { downloadMonthICS, downloadWeekICS } from '../lib/ics';
 
@@ -63,14 +64,7 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
 }
 
 function buildCreateDraftForDay(day: Date): Partial<EventItem> {
-  const now = new Date();
-  const start = new Date(day);
-  start.setHours(now.getHours(), now.getMinutes(), 0, 0);
-  const end = new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS);
-  return {
-    dateISO: start.toISOString(),
-    endDateISO: end.toISOString(),
-  };
+  return defaultNewEventRangeISO(day);
 }
 
 const getTransparentColor = (color: string, alpha = 0.15) => {

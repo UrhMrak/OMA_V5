@@ -278,6 +278,37 @@ body {
   background: var(--surface);
   color: var(--text);
 }
+.suggest-textarea {
+  position: relative;
+  width: 100%;
+}
+.suggest-textarea-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.suggest-textarea-dropdown li {
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.suggest-textarea-dropdown li:hover,
+.suggest-textarea-dropdown li.active {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
 .label {
   display: block;
   font-size: 12px;
@@ -1385,6 +1416,14 @@ body.modal-open {
 .settings-landing-toggle {
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+.settings-navigation-follow {
+  margin-top: 24px;
+}
+.event-musician-details .label,
+.event-musician-details .event-readonly-value {
+  font-size: 13px;
+  line-height: 1.5;
 }
 @media (max-width: 520px) {
   .settings-preference-row {

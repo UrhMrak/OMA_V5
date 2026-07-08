@@ -86,6 +86,17 @@ export function nowFloatingISO(): string {
   ).toISOString();
 }
 
+export function defaultNewEventRangeISO(referenceDate = new Date()): {
+  dateISO: string;
+  endDateISO: string;
+} {
+  const datePart = `${referenceDate.getFullYear()}-${pad2(referenceDate.getMonth() + 1)}-${pad2(referenceDate.getDate())}`;
+  return {
+    dateISO: inputValueToISO(`${datePart}T10:00`),
+    endDateISO: inputValueToISO(`${datePart}T13:00`),
+  };
+}
+
 export function isSameLocalDay(iso: string | null | undefined, reference: Date): boolean {
   if (!iso) return false;
   return getLocalDateKeyFromISO(iso) === getLocalDateKey(reference);

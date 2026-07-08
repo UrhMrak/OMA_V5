@@ -1,12 +1,18 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { EventItem } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
+import { useEvents } from '../../context/EventsContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import {
+  buildEventFieldSuggestions,
+  isSuggestibleEventField,
+  type SuggestibleEventField,
+} from '../../lib/eventSuggestions';
+import {
   isoToInputValue,
   inputValueToISO,
-  nowFloatingISO,
+  defaultNewEventRangeISO,
   formatWallTime,
   formatEventHeadingDateTime,
 } from '../../lib/date';
@@ -14,6 +20,7 @@ import { downloadICS } from '../../lib/ics';
 import DeleteIcon from '../icons/DeleteIcon';
 import { useModalClose } from '../Layout/useModalClose';
 import AutoResizeTextarea from '../AutoResizeTextarea';
+import SuggestTextarea from '../SuggestTextarea';
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 const FALLBACK_EVENT_COLOR = '#2563eb';
@@ -53,6 +60,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
+  const defaultRange = defaultNewEventRangeISO();
   const defaults: Partial<EventItem> = {
     color: getLastUsedColor(),
     title: '',
@@ -66,15 +74,19 @@ function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
     dress: '',
     other: '',
     libraryPath: '',
-    dateISO: nowFloatingISO(),
+    dateISO: defaultRange.dateISO,
+    endDateISO: defaultRange.endDateISO,
   };
 
   const merged = { ...defaults, ...source };
-  const startMsCandidate = merged.dateISO ? Date.parse(merged.dateISO) : Date.now();
-  const startMs = Number.isNaN(startMsCandidate) ? Date.now() : startMsCandidate;
+  const startMsCandidate = merged.dateISO ? Date.parse(merged.dateISO) : Date.parse(defaultRange.dateISO);
+  const startMs = Number.isNaN(startMsCandidate) ? Date.parse(defaultRange.dateISO) : startMsCandidate;
   const endMsCandidate = merged.endDateISO ? Date.parse(merged.endDateISO) : NaN;
+  const startDatePart = isoToInputValue(new Date(startMs).toISOString()).slice(0, 10);
+  const defaultEndISO =
+    (startDatePart ? inputValueToISO(`${startDatePart}T13:00`) : '') || defaultRange.endDateISO;
   const endMs = Number.isNaN(endMsCandidate)
-    ? startMs + DEFAULT_EVENT_DURATION_MS
+    ? Date.parse(defaultEndISO)
     : endMsCandidate;
 
   return {
@@ -98,9 +110,11 @@ export default function EventModal({
   onCopy?: (event: EventItem) => void;
 }) {
   const { role } = useAuth();
+  const { events } = useEvents();
   const { t, locale } = useLanguage();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
+  const fieldSuggestions = useMemo(() => buildEventFieldSuggestions(events), [events]);
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? draft));
   const [isDeleting, setIsDeleting] = useState(false);
@@ -134,6 +148,34 @@ export default function EventModal({
       await Promise.resolve(onSave());
     }
     requestClose();
+  }
+
+  function renderEditableTextarea(
+    value: string,
+    onValueChange: (nextValue: string) => void,
+    field: SuggestibleEventField,
+    style?: CSSProperties
+  ) {
+    if (isAdmin) {
+      return (
+        <SuggestTextarea
+          className="textarea"
+          value={value}
+          style={style}
+          suggestions={fieldSuggestions[field]}
+          onChange={(e) => onValueChange(e.target.value)}
+        />
+      );
+    }
+
+    return (
+      <AutoResizeTextarea
+        className="textarea"
+        value={value}
+        style={style}
+        onChange={(e) => onValueChange(e.target.value)}
+      />
+    );
   }
 
   async function handleDelete() {
@@ -239,6 +281,8 @@ export default function EventModal({
         <label className="label">{label}</label>
         {readOnly ? (
           <div className="event-readonly-value">{String(value)}</div>
+        ) : isSuggestibleEventField(key) ? (
+          renderEditableTextarea(String(value), (nextValue) => setForm({ ...form, [key]: nextValue }), key, inputStyle)
         ) : (
           <AutoResizeTextarea
             className="textarea"
@@ -335,12 +379,7 @@ export default function EventModal({
         {readOnly ? (
           <div className="event-readonly-value">{value}</div>
         ) : (
-          <AutoResizeTextarea
-            className="textarea"
-            value={value}
-            style={textareaStyle}
-            onChange={(e) => setForm({ ...form, program: e.target.value })}
-          />
+          renderEditableTextarea(value, (nextValue) => setForm({ ...form, program: nextValue }), 'program', textareaStyle)
         )}
       </div>
     );
@@ -361,12 +400,12 @@ export default function EventModal({
         {readOnly ? (
           <div className="event-readonly-value">{value}</div>
         ) : (
-          <AutoResizeTextarea
-            className="textarea"
-            value={value}
-            style={textareaStyle}
-            onChange={(e) => setForm({ ...form, otherParticipants: e.target.value })}
-          />
+          renderEditableTextarea(
+            value,
+            (nextValue) => setForm({ ...form, otherParticipants: nextValue }),
+            'otherParticipants',
+            textareaStyle
+          )
         )}
       </div>
     );
@@ -387,12 +426,7 @@ export default function EventModal({
         {readOnly ? (
           <div className="event-readonly-value">{value}</div>
         ) : (
-          <AutoResizeTextarea
-            className="textarea"
-            value={value}
-            style={textareaStyle}
-            onChange={(e) => setForm({ ...form, other: e.target.value })}
-          />
+          renderEditableTextarea(value, (nextValue) => setForm({ ...form, other: nextValue }), 'other', textareaStyle)
         )}
       </div>
     );
@@ -429,14 +463,16 @@ export default function EventModal({
             {isAdmin && <hr className="modal-divider" />}
             {isAdmin && row(t('event.title'), 'title', 'text', true)}
             {isAdmin && row(t('event.activity'), 'activity', 'text', true)}
-            {row(t('event.venue'), 'venue', 'text', true, true)}
-            {programRow()}
-            {row(t('event.conductor'), 'conductor', 'text', true, true)}
-            {row(t('event.soloists'), 'soloists', 'text', true, true)}
-            {otherParticipantsRow()}
-            {row(t('event.ensemble'), 'ensemble', 'text', true, true)}
-            {row(t('event.dress'), 'dress', 'text', true, true)}
-            {otherRow()}
+            <div className={!isAdmin ? 'event-musician-details' : undefined}>
+              {row(t('event.venue'), 'venue', 'text', true, true)}
+              {programRow()}
+              {row(t('event.conductor'), 'conductor', 'text', true, true)}
+              {row(t('event.soloists'), 'soloists', 'text', true, true)}
+              {otherParticipantsRow()}
+              {row(t('event.ensemble'), 'ensemble', 'text', true, true)}
+              {row(t('event.dress'), 'dress', 'text', true, true)}
+              {otherRow()}
+            </div>
           </div>
         </div>
         <div className="row-between" style={{ marginTop: 16 }}>

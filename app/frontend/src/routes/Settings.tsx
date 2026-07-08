@@ -120,7 +120,7 @@ export default function Settings() {
             ))}
           </div>
         </div>
-        <div className="row-between">
+        <div className="row-between settings-navigation-follow">
           <div>
             <div className="card-title">{t('settings.rememberLibraryFolder')}</div>
             <p className="muted small" style={{ margin: 0 }}>
