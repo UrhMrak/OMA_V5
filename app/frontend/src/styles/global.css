@@ -1220,6 +1220,12 @@ body.modal-open {
   width: 100%;
   margin-top: 8px;
 }
+.news-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
 .news-content {
   font-size: 13px;
   line-height: 1.5;

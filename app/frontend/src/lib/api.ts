@@ -118,4 +118,5 @@ export const api = {
   put: <T = any>(url: string, body: any) => request<T>('PUT', url, body),
   delete: <T = any>(url: string) => request<T>('DELETE', url),
   upload: <T = any>(url: string, form: FormData) => request<T>('POST', url, form),
+  uploadPut: <T = any>(url: string, form: FormData) => request<T>('PUT', url, form),
 };

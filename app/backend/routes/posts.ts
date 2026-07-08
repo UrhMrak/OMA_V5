@@ -47,6 +47,55 @@ function extractTextField(input: unknown): string {
   return typeof input === 'string' ? input : '';
 }
 
+function parseJsonStringArray(input: unknown): string[] {
+  const raw = extractTextField(input);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+async function uploadAttachments(
+  postId: string,
+  files: Express.Multer.File[],
+  existingAttachments: PostAttachment[]
+): Promise<PostAttachment[]> {
+  const attachments = [...existingAttachments];
+  const usedDisplayNames = new Set(attachments.map((attachment) => attachment.name));
+  const usedStorageNames = new Set(attachments.map((attachment) => attachment.storedFilename));
+
+  for (const file of files) {
+    const displayName = ensureUniqueFilename(
+      usedDisplayNames,
+      decodeUploadFilename(file.originalname)
+    );
+    const storedFilename = ensureUniqueFilename(
+      usedStorageNames,
+      toStoredBasename(displayName) || `file-${Date.now()}`
+    );
+    const { error: uploadError } = await supabase.storage
+      .from(POSTS_BUCKET)
+      .upload(storageKey(postId, storedFilename), file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+    if (uploadError) throw new Error(uploadError.message);
+
+    attachments.push({
+      id: crypto.randomUUID(),
+      name: displayName,
+      storedFilename,
+      size: file.size,
+      mimeType: file.mimetype,
+    });
+  }
+
+  return attachments;
+}
+
 function storageKey(postId: string, storedFilename: string): string {
   return `${postId}/${storedFilename}`;
 }
@@ -95,33 +144,13 @@ router.post(
     const content = extractTextField(req.body?.content).trim();
 
     const files = (req.files as Express.Multer.File[] | undefined) || [];
-    const attachments: PostAttachment[] = [];
-    const usedDisplayNames = new Set<string>();
-    const usedStorageNames = new Set<string>();
+    let attachments: PostAttachment[] = [];
 
-    for (const file of files) {
-      const displayName = ensureUniqueFilename(
-        usedDisplayNames,
-        decodeUploadFilename(file.originalname)
-      );
-      const storedFilename = ensureUniqueFilename(
-        usedStorageNames,
-        toStoredBasename(displayName) || `file-${Date.now()}`
-      );
-      const { error: uploadError } = await supabase.storage
-        .from(POSTS_BUCKET)
-        .upload(storageKey(postId, storedFilename), file.buffer, {
-          contentType: file.mimetype,
-          upsert: true,
-        });
-      if (uploadError) return res.status(500).json({ error: uploadError.message });
-
-      attachments.push({
-        id: crypto.randomUUID(),
-        name: displayName,
-        storedFilename,
-        size: file.size,
-        mimeType: file.mimetype,
+    try {
+      attachments = await uploadAttachments(postId, files, []);
+    } catch (error) {
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Upload failed',
       });
     }
 
@@ -134,6 +163,78 @@ router.post(
     };
 
     const { error } = await supabase.from(TABLE).insert(row);
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(toClient(row));
+  }
+);
+
+router.put(
+  '/:id',
+  requireAdmin,
+  (req, res, next) => {
+    upload.array('attachments')(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          return res.status(400).json({ error: err.message });
+        }
+        return res.status(400).json({ error: err?.message || 'Upload failed' });
+      }
+      return next();
+    });
+  },
+  async (req, res) => {
+    const { id } = req.params;
+    const { data: existing, error: selectError } = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (selectError) return res.status(500).json({ error: selectError.message });
+    if (!existing) return res.status(404).json({ error: 'Post not found' });
+
+    const title = extractTextField(req.body?.title).trim();
+    const content = extractTextField(req.body?.content).trim();
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+
+    const removedAttachmentIds = new Set(parseJsonStringArray(req.body?.removedAttachmentIds));
+    const currentAttachments: PostAttachment[] = existing.attachments || [];
+    const keptAttachments = currentAttachments.filter(
+      (attachment) => !removedAttachmentIds.has(attachment.id)
+    );
+    const removedAttachments = currentAttachments.filter((attachment) =>
+      removedAttachmentIds.has(attachment.id)
+    );
+
+    if (removedAttachments.length > 0) {
+      const keys = removedAttachments.map((attachment) =>
+        storageKey(id, attachment.storedFilename)
+      );
+      await supabase.storage.from(POSTS_BUCKET).remove(keys);
+    }
+
+    const files = (req.files as Express.Multer.File[] | undefined) || [];
+    let attachments = keptAttachments;
+
+    try {
+      attachments = await uploadAttachments(id, files, keptAttachments);
+    } catch (error) {
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Upload failed',
+      });
+    }
+
+    const row = {
+      ...existing,
+      title,
+      content,
+      attachments,
+    };
+
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ title, content, attachments })
+      .eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
 
     res.json(toClient(row));

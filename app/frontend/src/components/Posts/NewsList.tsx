@@ -19,7 +19,6 @@ type AttachmentViewer = {
 
 const INITIAL_VISIBLE_COUNT = 1;
 const POSTS_PER_LOAD = 1;
-const SMALL_POST_MIN_HEIGHT = 120;
 
 export default function NewsList() {
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -27,14 +26,19 @@ export default function NewsList() {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement | null>(null);
   const [viewer, setViewer] = useState<AttachmentViewer | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editFiles, setEditFiles] = useState<File[]>([]);
+  const [editRemovedAttachmentIds, setEditRemovedAttachmentIds] = useState<string[]>([]);
   const objectUrlRef = useRef<string | null>(null);
-  const listRef = useRef<HTMLUListElement | null>(null);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
-  const initialExpansionDoneRef = useRef(false);
   const wasIntersectingRef = useRef<boolean | null>(null);
+  const autoLoadEnabledRef = useRef(false);
   const { role } = useAuth();
   const { t } = useLanguage();
 
@@ -154,10 +158,19 @@ export default function NewsList() {
   useEffect(() => { refresh(); }, []);
 
   useEffect(() => {
-    initialExpansionDoneRef.current = false;
     wasIntersectingRef.current = null;
+    autoLoadEnabledRef.current = false;
     setVisibleCount(INITIAL_VISIBLE_COUNT);
   }, [posts]);
+
+  useEffect(() => {
+    function onScroll() {
+      autoLoadEnabledRef.current = true;
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => {
@@ -167,32 +180,10 @@ export default function NewsList() {
   }, [posts.length]);
 
   useEffect(() => {
-    if (!loaded || initialExpansionDoneRef.current || posts.length === 0) return;
-
-    const list = listRef.current;
-    if (!list) return;
-
-    const frame = requestAnimationFrame(() => {
-      const cards = list.querySelectorAll(':scope > .card');
-      let totalHeight = 0;
-      cards.forEach((card) => {
-        totalHeight += card.getBoundingClientRect().height;
-      });
-
-      if (totalHeight < SMALL_POST_MIN_HEIGHT && visibleCount < posts.length) {
-        setVisibleCount((prev) => prev + 1);
-        return;
-      }
-
-      initialExpansionDoneRef.current = true;
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [loaded, posts.length, visibleCount]);
-
-  useEffect(() => {
     const button = loadMoreRef.current;
     if (!button || visibleCount >= posts.length) return;
+
+    wasIntersectingRef.current = null;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -205,7 +196,7 @@ export default function NewsList() {
           return;
         }
 
-        if (isIntersecting && !wasIntersectingRef.current) {
+        if (isIntersecting && !wasIntersectingRef.current && autoLoadEnabledRef.current) {
           loadMore();
         }
 
@@ -235,7 +226,118 @@ export default function NewsList() {
 
   async function remove(id: string) {
     await api.delete(`/api/posts/${id}`);
+    if (editingId === id) cancelEdit();
     refresh();
+  }
+
+  function startEdit(post: PostItem) {
+    setEditingId(post.id);
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditFiles([]);
+    setEditRemovedAttachmentIds([]);
+    if (editFileInputRef.current) editFileInputRef.current.value = '';
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle('');
+    setEditContent('');
+    setEditFiles([]);
+    setEditRemovedAttachmentIds([]);
+    if (editFileInputRef.current) editFileInputRef.current.value = '';
+  }
+
+  function toggleRemovedAttachment(attachmentId: string) {
+    setEditRemovedAttachmentIds((prev) =>
+      prev.includes(attachmentId)
+        ? prev.filter((id) => id !== attachmentId)
+        : [...prev, attachmentId]
+    );
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editTitle.trim()) return;
+    const form = new FormData();
+    form.append('title', editTitle.trim());
+    form.append('content', editContent.trim());
+    if (editRemovedAttachmentIds.length > 0) {
+      form.append('removedAttachmentIds', JSON.stringify(editRemovedAttachmentIds));
+    }
+    editFiles.forEach((file) => form.append('attachments', file, file.name));
+
+    await api.uploadPut(`/api/posts/${editingId}`, form);
+    cancelEdit();
+    refresh();
+  }
+
+  function renderAttachments(post: PostItem) {
+    if (!post.attachments || post.attachments.length === 0) return null;
+    return (
+      <div className="news-attachments">
+        <div className="muted small">{t('news.attachments')}</div>
+        <ul>
+          {post.attachments.map((attachment) => (
+            <li key={attachment.id}>
+              <span className="news-attachment-dot" aria-hidden="true" />
+              <button
+                type="button"
+                className="news-attachment-link"
+                onClick={() => openAttachment(attachment)}
+                disabled={!attachment.downloadUrl}
+              >
+                {attachment.name} ({Math.max(1, Math.round(attachment.size / 1024))} KB)
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  function renderEditAttachments(post: PostItem) {
+    const visibleAttachments = (post.attachments || []).filter(
+      (attachment) => !editRemovedAttachmentIds.includes(attachment.id)
+    );
+
+    return (
+      <>
+        {visibleAttachments.length > 0 && (
+          <div className="news-attachments">
+            <div className="muted small">{t('news.attachments')}</div>
+            <ul>
+              {visibleAttachments.map((attachment) => (
+                <li key={attachment.id}>
+                  <span className="news-attachment-dot" aria-hidden="true" />
+                  <span>{attachment.name}</span>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => toggleRemovedAttachment(attachment.id)}
+                  >
+                    {t('news.removeAttachment')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <input
+          ref={editFileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.doc,.docx"
+          onChange={(e) => setEditFiles(Array.from(e.target.files || []))}
+        />
+        {editFiles.length > 0 && (
+          <ul className="muted small">
+            {editFiles.map((file) => (
+              <li key={file.name}>{file.name}</li>
+            ))}
+          </ul>
+        )}
+      </>
+    );
   }
 
   return (
@@ -276,34 +378,50 @@ export default function NewsList() {
       {!loaded ? (
         <SkeletonCardList count={3} />
       ) : (
-      <ul className="card-list" ref={listRef}>
+      <ul className="card-list">
         {posts.slice(0, visibleCount).map((p) => (
           <li key={p.id} className="card">
-            <div className="card-title">{p.title}</div>
-            <div className="muted small">{new Date(p.createdAtISO).toLocaleString()}</div>
-            <p className="news-content">{renderContent(p.content)}</p>
-            {p.attachments && p.attachments.length > 0 && (
-              <div className="news-attachments">
-                <div className="muted small">{t('news.attachments')}</div>
-                <ul>
-                  {p.attachments.map((attachment) => (
-                    <li key={attachment.id}>
-                      <span className="news-attachment-dot" aria-hidden="true" />
-                      <button
-                        type="button"
-                        className="news-attachment-link"
-                        onClick={() => openAttachment(attachment)}
-                        disabled={!attachment.downloadUrl}
-                      >
-                        {attachment.name} ({Math.max(1, Math.round(attachment.size / 1024))} KB)
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+            {editingId === p.id ? (
+              <div className="row-gap">
+                <AutoResizeTextarea
+                  className="textarea"
+                  placeholder={t('news.titlePlaceholder')}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                />
+                <AutoResizeTextarea
+                  className="textarea"
+                  placeholder={t('news.contentPlaceholder')}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                />
+                {renderEditAttachments(p)}
+                <div className="news-admin-actions">
+                  <button className="btn primary" type="button" onClick={saveEdit}>
+                    {t('news.save')}
+                  </button>
+                  <button className="btn" type="button" onClick={cancelEdit}>
+                    {t('news.cancel')}
+                  </button>
+                </div>
               </div>
-            )}
-            {role === 'admin' && (
-              <button className="btn danger" onClick={() => remove(p.id)}>{t('news.delete')}</button>
+            ) : (
+              <>
+                <div className="card-title">{p.title}</div>
+                <div className="muted small">{new Date(p.createdAtISO).toLocaleString()}</div>
+                <p className="news-content">{renderContent(p.content)}</p>
+                {renderAttachments(p)}
+                {role === 'admin' && (
+                  <div className="news-admin-actions">
+                    <button className="btn" type="button" onClick={() => startEdit(p)}>
+                      {t('news.edit')}
+                    </button>
+                    <button className="btn danger" type="button" onClick={() => remove(p.id)}>
+                      {t('news.delete')}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </li>
         ))}
@@ -332,5 +450,3 @@ export default function NewsList() {
     </div>
   );
 }
-
-
