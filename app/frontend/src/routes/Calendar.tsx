@@ -22,7 +22,10 @@ import { downloadMonthICS, downloadWeekICS } from '../lib/ics';
 
 type ViewMode = 'month' | 'week';
 type Direction = 'left' | 'right';
-type CalendarRow = { weekNumber: number; cells: Array<Date | null> };
+type CalendarRow = { weekNumber: number; cells: Date[] };
+
+const MONTH_GRID_WEEKS = 6;
+const MONTH_GRID_DAYS = MONTH_GRID_WEEKS * 7;
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 const COPIED_EVENT_KEY = 'oma:copiedEvent';
@@ -314,16 +317,13 @@ export default function CalendarPage() {
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const startDay = firstDayOfMonth.getDay();
     const startDayMonday = startDay === 0 ? 6 : startDay - 1;
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const gridStart = addDays(firstDayOfMonth, -startDayMonday);
 
-    const cells: Array<Date | null> = [];
-    for (let i = 0; i < startDayMonday; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(currentYear, currentMonth, d));
+    const cells = Array.from({ length: MONTH_GRID_DAYS }, (_, i) => addDays(gridStart, i));
 
     const rows: CalendarRow[] = [];
-    for (let i = 0; i < cells.length; i += 7) {
-      const monday = addDays(firstDayOfMonth, i - startDayMonday);
-      rows.push({ weekNumber: getISOWeekNumber(monday), cells: cells.slice(i, i + 7) });
+    for (let i = 0; i < MONTH_GRID_DAYS; i += 7) {
+      rows.push({ weekNumber: getISOWeekNumber(cells[i]), cells: cells.slice(i, i + 7) });
     }
     return rows;
   }, [currentYear, currentMonth]);
@@ -469,23 +469,26 @@ export default function CalendarPage() {
                 {row.weekNumber}
               </div>
               {row.cells.map((cell, dayIdx) => {
-                const iso = cell ? getLocalDateKey(cell) : '';
-                const dayEvents = cell ? byDate[iso] || [] : [];
-                const isToday = cell ? iso === todayKey : false;
-                const canPasteHere = isPasteMode && !!cell;
-                const canCreateHere = role === 'admin' && !!cell && !isPasteMode;
+                const iso = getLocalDateKey(cell);
+                const dayEvents = byDate[iso] || [];
+                const isToday = iso === todayKey;
+                const isAdjacentMonth =
+                  viewMode === 'month' &&
+                  (cell.getFullYear() !== currentYear || cell.getMonth() !== currentMonth);
+                const canPasteHere = isPasteMode;
+                const canCreateHere = role === 'admin' && !isPasteMode;
                 return (
                   <div
                     key={dayIdx}
-                    className={`calendar-cell ${cell ? '' : 'empty'} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''} ${canCreateHere ? 'calendar-cell-clickable' : ''}`}
-                    onClick={cell ? () => handleDayClick(cell as Date) : undefined}
+                    className={`calendar-cell ${isAdjacentMonth ? 'calendar-cell-adjacent' : ''} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''} ${canCreateHere ? 'calendar-cell-clickable' : ''}`}
+                    onClick={() => handleDayClick(cell)}
                     role={canPasteHere || canCreateHere ? 'button' : undefined}
                     title={canPasteHere ? t('calendar.pasteHere') : undefined}
                   >
                     {dayIdx === 0 ? (
                       <span className="calendar-week-badge">{row.weekNumber}</span>
                     ) : null}
-                    {cell ? <div className="calendar-date">{cell.getDate()}</div> : null}
+                    <div className="calendar-date">{cell.getDate()}</div>
                     {dayEvents.map((e) => {
                       const topLine = [formatPillTime(e.dateISO), e.activity]
                         .filter(Boolean)

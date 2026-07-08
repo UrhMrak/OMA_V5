@@ -39,7 +39,8 @@ export default function NewsList() {
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const wasIntersectingRef = useRef<boolean | null>(null);
   const autoLoadEnabledRef = useRef(false);
-  const { role } = useAuth();
+  const { role, username } = useAuth();
+  const isAdmin = role === 'admin' || username === 'admin';
   const { t } = useLanguage();
 
   usePageReady(true);
@@ -342,7 +343,7 @@ export default function NewsList() {
 
   return (
     <div>
-      {role === 'admin' && (
+      {isAdmin && (
         <div className="card" style={{ marginBottom: 12 }}>
           <div className="row-gap">
             <AutoResizeTextarea
@@ -383,6 +384,14 @@ export default function NewsList() {
           <li key={p.id} className="card">
             {editingId === p.id ? (
               <div className="row-gap">
+                <div className="news-admin-actions">
+                  <button className="btn primary" type="button" onClick={saveEdit}>
+                    {t('news.save')}
+                  </button>
+                  <button className="btn" type="button" onClick={cancelEdit}>
+                    {t('news.cancel')}
+                  </button>
+                </div>
                 <AutoResizeTextarea
                   className="textarea"
                   placeholder={t('news.titlePlaceholder')}
@@ -396,31 +405,27 @@ export default function NewsList() {
                   onChange={(e) => setEditContent(e.target.value)}
                 />
                 {renderEditAttachments(p)}
-                <div className="news-admin-actions">
-                  <button className="btn primary" type="button" onClick={saveEdit}>
-                    {t('news.save')}
-                  </button>
-                  <button className="btn" type="button" onClick={cancelEdit}>
-                    {t('news.cancel')}
-                  </button>
-                </div>
               </div>
             ) : (
               <>
-                <div className="card-title">{p.title}</div>
-                <div className="muted small">{new Date(p.createdAtISO).toLocaleString()}</div>
+                <div className="news-post-header">
+                  <div>
+                    <div className="card-title">{p.title}</div>
+                    <div className="muted small">{new Date(p.createdAtISO).toLocaleString()}</div>
+                  </div>
+                  {isAdmin && (
+                    <div className="news-admin-actions">
+                      <button className="btn" type="button" onClick={() => startEdit(p)}>
+                        {t('news.edit')}
+                      </button>
+                      <button className="btn danger" type="button" onClick={() => remove(p.id)}>
+                        {t('news.delete')}
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <p className="news-content">{renderContent(p.content)}</p>
                 {renderAttachments(p)}
-                {role === 'admin' && (
-                  <div className="news-admin-actions">
-                    <button className="btn" type="button" onClick={() => startEdit(p)}>
-                      {t('news.edit')}
-                    </button>
-                    <button className="btn danger" type="button" onClick={() => remove(p.id)}>
-                      {t('news.delete')}
-                    </button>
-                  </div>
-                )}
               </>
             )}
           </li>

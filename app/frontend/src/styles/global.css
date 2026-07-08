@@ -545,8 +545,12 @@ body {
   flex-direction: column;
   gap: 4px;
 }
-.calendar-cell.empty {
-  background: var(--surface);
+.calendar-cell-adjacent {
+  background: var(--surface-hover);
+}
+.calendar-cell-adjacent .calendar-date {
+  color: var(--muted);
+  opacity: 0.7;
 }
 .calendar-cell-today {
   border: 1px solid #60a5fa !important;
@@ -1220,11 +1224,35 @@ body.modal-open {
   width: 100%;
   margin-top: 8px;
 }
+.news-post-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.news-post-header .card-title {
+  margin-bottom: 2px;
+}
 .news-admin-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .news-post-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .news-admin-actions {
+    width: 100%;
+  }
+  .news-admin-actions .btn {
+    flex: 1;
+    min-width: 0;
+  }
 }
 .news-content {
   font-size: 13px;
