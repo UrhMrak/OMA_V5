@@ -46,9 +46,17 @@ function isInlineMime(mime: string | null | undefined): boolean {
   return INLINE_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix));
 }
 
+function encodePathSegment(segment: string): string {
+  return segment.replace(/%/g, '%25').replace(/\//g, '%2F');
+}
+
+function decodePathSegment(segment: string): string {
+  return segment.replace(/%2F/gi, '/').replace(/%25/g, '%');
+}
+
 function baseName(p: string): string {
   const parts = p.split('/');
-  return parts[parts.length - 1] || p;
+  return decodePathSegment(parts[parts.length - 1] || p);
 }
 
 function parentPath(p: string): string {
@@ -223,7 +231,19 @@ router.get('/tree', requireAuth, async (_req, res) => {
 });
 
 router.post('/folder', requireAdmin, async (req, res) => {
-  const folder = normalizePath(String(req.body.folder || ''));
+  const parentPath = normalizePath(String(req.body.parentPath ?? req.body.parent ?? ''));
+  const name = String(req.body.name ?? '').trim();
+  let folder = '';
+
+  if (name) {
+    if (name.includes('..') || name.includes('\0')) {
+      return res.status(400).send('Invalid name');
+    }
+    folder = parentPath ? `${parentPath}/${encodePathSegment(name)}` : encodePathSegment(name);
+  } else {
+    folder = normalizePath(String(req.body.folder || ''));
+  }
+
   if (!folder) return res.status(400).send('folder required');
   if (!isSafePath(folder)) return res.status(400).send('Invalid path');
   await ensureFolders(folder);
@@ -370,12 +390,13 @@ router.post('/rename', requireAdmin, async (req, res) => {
   if (!rel) return res.status(400).send('path required');
   if (!isSafePath(rel)) return res.status(400).send('Invalid path');
   if (!newName) return res.status(400).send('newName required');
-  if (newName.includes('/') || newName.includes('..')) {
+  if (newName.includes('..') || newName.includes('\0')) {
     return res.status(400).send('Invalid name');
   }
 
   const parent = parentPath(rel);
-  const newPath = parent ? `${parent}/${newName}` : newName;
+  const encodedName = encodePathSegment(newName);
+  const newPath = parent ? `${parent}/${encodedName}` : encodedName;
   if (newPath === rel) return res.json({ ok: true });
 
   const { data: item } = await supabase.from(TABLE).select('*').eq('path', rel).maybeSingle();

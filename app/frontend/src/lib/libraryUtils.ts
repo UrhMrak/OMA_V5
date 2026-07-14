@@ -12,13 +12,26 @@ export type RecentLibraryFile = {
 };
 
 const RECENT_KEY = 'oma:recentLibraryFiles';
-const MAX_RECENT = 8;
+const MAX_RECENT = 5;
 
-export function pathToSegments(path: string): string[] {
-  const parts = path
-    .replace(/^\/+|\/+$/g, '')
+export function encodePathSegment(segment: string): string {
+  return segment.replace(/%/g, '%25').replace(/\//g, '%2F');
+}
+
+export function decodePathSegment(segment: string): string {
+  return segment.replace(/%2F/gi, '/').replace(/%25/g, '%');
+}
+
+function normalizeLibraryPath(path: string): string {
+  return path.replace(/^\/+|\/+$/g, '').trim();
+}
+
+export function splitLibraryPath(path: string): string[] {
+  const normalized = normalizeLibraryPath(path);
+  if (!normalized) return [];
+  const parts = normalized
     .split('/')
-    .map((segment) => segment.trim())
+    .map((segment) => decodePathSegment(segment.trim()))
     .filter((segment) => segment.length > 0);
   if (parts[0]?.toLowerCase() === 'uploads') {
     parts.shift();
@@ -26,10 +39,31 @@ export function pathToSegments(path: string): string[] {
   return parts;
 }
 
+export function segmentsToLibraryPath(segments: string[]): string {
+  return segments
+    .map((segment) => encodePathSegment(segment.trim()))
+    .filter((segment) => segment.length > 0)
+    .join('/');
+}
+
+export function appendToLibraryPath(parentPath: string, name: string): string {
+  const encodedName = encodePathSegment(name.trim());
+  const parent = normalizeLibraryPath(parentPath);
+  return parent ? `${parent}/${encodedName}` : encodedName;
+}
+
+export function formatLibraryPathForDisplay(path: string): string {
+  return splitLibraryPath(path).join('/');
+}
+
+export function pathToSegments(path: string): string[] {
+  return splitLibraryPath(path);
+}
+
 export function dirname(filePath: string): string {
-  const parts = pathToSegments(filePath);
+  const parts = splitLibraryPath(filePath);
   parts.pop();
-  return parts.join('/');
+  return segmentsToLibraryPath(parts);
 }
 
 export function searchLibrary(node: LibraryNode, query: string): LibrarySearchResult[] {

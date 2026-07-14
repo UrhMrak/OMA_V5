@@ -7,9 +7,11 @@ import DeleteIcon from '../icons/DeleteIcon';
 import PdfViewerModal from '../Posts/PdfViewerModal';
 import {
   addRecentLibraryFile,
+  formatLibraryPathForDisplay,
   getRecentLibraryFiles,
   pathToSegments,
   searchLibrary,
+  segmentsToLibraryPath,
   type RecentLibraryFile,
 } from '../../lib/libraryUtils';
 
@@ -47,8 +49,7 @@ function CreateFolderForm({
 
     setIsCreating(true);
     try {
-      const fullPath = parentPath ? `${parentPath}/${folderName.trim()}` : folderName.trim();
-      await api.post('/api/library/folder', { folder: fullPath });
+      await api.post('/api/library/folder', { parentPath, name: folderName.trim() });
       setFolderName('');
       onCreated();
     } catch (err) {
@@ -767,7 +768,7 @@ export default function FolderTree({
                     ) : null}
                     {result.parentPath ? (
                       <span className="muted small library-search-folder-label">
-                        {t('library.inFolder', { folder: result.parentPath })}
+                        {t('library.inFolder', { folder: formatLibraryPathForDisplay(result.parentPath) })}
                       </span>
                     ) : null}
                   </li>
@@ -812,7 +813,7 @@ export default function FolderTree({
               {t('library.breadcrumbsRoot')}
             </button>
             {breadcrumbSegments.map((segment, index) => {
-              const path = breadcrumbSegments.slice(0, index + 1).join('/');
+              const path = segmentsToLibraryPath(breadcrumbSegments.slice(0, index + 1));
               const isLast = index === breadcrumbSegments.length - 1;
               return (
                 <span key={path} className="library-breadcrumb-wrap">
