@@ -217,10 +217,10 @@ export const en = {
   about: {
     title: 'About',
     intro:
-      'Orchestra Manager helps you plan rehearsals, manage your music library, and keep your ensemble in sync.',
+      'Orchestra Manager helps you stay on top of your rehearsals plan, manage your music, and keep your ensemble in sync.',
     help: {
       heading: 'Help & Support',
-      p1: "Need a hand? We're here to help you get the most out of Orchestra Manager.",
+      p1: "Need a hand? We're here to help you should you experience any issues.",
       p2: "Browse common questions below, or reach out to our team and we'll get back to you as soon as we can.",
       items: [
         {
@@ -242,23 +242,19 @@ export const en = {
     privacy: {
       heading: 'Privacy Policy',
       intro:
-        'Your privacy is important to us. This Privacy Policy explains how Orchestra Manager collects, uses, and protects your information when you use our service.',
+        'Your privacy is important to us. Orchestra Manager does not collect any personal data.',
       sections: [
         {
-          label: 'Information we collect.',
-          text: 'We collect information you provide directly, such as your name, email address, and any content you add to the platform (events, files, and notes). We also collect basic usage data to help us improve the service.',
+          label: 'No personal data collection.',
+          text: 'We do not collect, store, or process personal data. This includes names, email addresses, contact details, and other personally identifiable information.',
         },
         {
-          label: 'How we use information.',
-          text: 'We use your information to operate and maintain the service, communicate with you, and improve your experience. We do not sell your personal information to third parties.',
+          label: 'Service content.',
+          text: 'Content you add to the platform, such as events and files, is stored solely to provide the service to your ensemble. We do not use this content for marketing or sell it to third parties.',
         },
         {
-          label: 'Data storage and security.',
-          text: 'We take reasonable measures to protect your data against unauthorized access, alteration, or disclosure. However, no method of transmission or storage is completely secure.',
-        },
-        {
-          label: 'Your rights.',
-          text: 'You may request access to, correction of, or deletion of your personal information at any time by contacting us.',
+          label: 'No tracking.',
+          text: 'We do not use analytics, advertising trackers, or similar tools to collect information about how you use the service.',
         },
       ],
       contactPrefix: 'If you have any questions about this Privacy Policy, please contact us at ',
@@ -511,10 +507,10 @@ export const is: Translations = {
   about: {
     title: 'Um',
     intro:
-      'Orchestra Manager hj\u00E1lpar \u00FE\u00E9r a\u00F0 skipuleggja \u00E6fingar, halda utan um n\u00F3tnasafni\u00F0 og halda h\u00F3pnum samstilltum.',
+      'Orchestra Manager hj\u00E1lpar \u00FE\u00E9r a\u00F0 fylgjast me\u00F0 \u00E6finga\u00E1\u00E6tlun, stj\u00F3rna t\u00F3nlistarefni og halda h\u00F3pnum samstilltum.',
     help: {
       heading: 'Hj\u00E1lp og a\u00F0sto\u00F0',
-      p1: 'Vantar \u00FEig a\u00F0sto\u00F0? Vi\u00F0 erum h\u00E9r til a\u00F0 hj\u00E1lpa \u00FE\u00E9r a\u00F0 n\u00FDta Orchestra Manager sem best.',
+      p1: 'Vantar \u00FEig a\u00F0sto\u00F0? Vi\u00F0 erum h\u00E9r til a\u00F0 hj\u00E1lpa ef \u00FE\u00FA lendir \u00ED vandr\u00E6\u00F0um.',
       p2: 'Sko\u00F0a\u00F0u algengar spurningar h\u00E9r a\u00F0 ne\u00F0an e\u00F0a haf\u00F0u samband vi\u00F0 teymi\u00F0 okkar og vi\u00F0 sv\u00F6rum eins flj\u00F3tt og vi\u00F0 getum.',
       items: [
         {
@@ -536,23 +532,19 @@ export const is: Translations = {
     privacy: {
       heading: 'Pers\u00F3nuverndarstefna',
       intro:
-        'Pers\u00F3nuvernd \u00FE\u00EDn skiptir okkur m\u00E1li. \u00DEessi pers\u00F3nuverndarstefna \u00FAtsk\u00FDrir hvernig Orchestra Manager safnar, notar og verndar uppl\u00FDsingar \u00FE\u00EDnar \u00FEegar \u00FE\u00FA notar \u00FEj\u00F3nustuna.',
+        'Pers\u00F3nuvernd \u00FE\u00EDn skiptir okkur m\u00E1li. Orchestra Manager safnar ekki neinum pers\u00F3nuuppl\u00FDsingum.',
       sections: [
         {
-          label: 'Uppl\u00FDsingar sem vi\u00F0 s\u00F6fnum.',
-          text: 'Vi\u00F0 s\u00F6fnum uppl\u00FDsingum sem \u00FE\u00FA gefur beint, svo sem nafni \u00FE\u00EDnu, netfangi og \u00F6llu efni sem \u00FE\u00FA b\u00E6tir vi\u00F0 kerfi\u00F0 (vi\u00F0bur\u00F0um, skr\u00E1m og gl\u00F3sum). Vi\u00F0 s\u00F6fnum einnig grunnnotkunarg\u00F6gnum til a\u00F0 b\u00E6ta \u00FEj\u00F3nustuna.',
+          label: 'Engin s\u00F6fnun pers\u00F3nuuppl\u00FDsinga.',
+          text: 'Vi\u00F0 s\u00F6fnum ekki, geymum e\u00F0a vinnum pers\u00F3nuuppl\u00FDsingar. \u00DEetta n\u00E6r til nafna, netfanga, tengili\u00F0auppl\u00FDsinga og annarra pers\u00F3nugreinanlega uppl\u00FDsinga.',
         },
         {
-          label: 'Hvernig vi\u00F0 notum uppl\u00FDsingar.',
-          text: 'Vi\u00F0 notum uppl\u00FDsingar \u00FE\u00EDnar til a\u00F0 reka og vi\u00F0halda \u00FEj\u00F3nustunni, eiga samskipti vi\u00F0 \u00FEig og b\u00E6ta upplifun \u00FE\u00EDna. Vi\u00F0 seljum ekki pers\u00F3nuuppl\u00FDsingar \u00FE\u00EDnar til \u00FEri\u00F0ja a\u00F0ila.',
+          label: 'Efni \u00ED \u00FEj\u00F3nustunni.',
+          text: 'Efni sem \u00FE\u00FA b\u00E6tir vi\u00F0 kerfi\u00F0, svo sem vi\u00F0bur\u00F0ir og skr\u00E1r, er geymt eing\u00F6ngu til a\u00F0 veita h\u00F3pnum \u00FE\u00EDnum \u00FEj\u00F3nustuna. Vi\u00F0 notum \u00FEetta efni ekki \u00ED marka\u00F0ssetningu og seljum \u00FEa\u00F0 ekki til \u00FEri\u00F0ja a\u00F0ila.',
         },
         {
-          label: 'Geymsla og \u00F6ryggi gagna.',
-          text: 'Vi\u00F0 gerum e\u00F0lilegar r\u00E1\u00F0stafanir til a\u00F0 vernda g\u00F6gn \u00FE\u00EDn gegn \u00F3heimilum a\u00F0gangi, breytingum e\u00F0a birtingu. Hins vegar er engin a\u00F0fer\u00F0 vi\u00F0 sendingu e\u00F0a geymslu fullkomlega \u00F6rugg.',
-        },
-        {
-          label: 'R\u00E9ttindi \u00FE\u00EDn.',
-          text: '\u00DE\u00FA getur hven\u00E6r sem er \u00F3ska\u00F0 eftir a\u00F0gangi a\u00F0, lei\u00F0r\u00E9ttingu \u00E1 e\u00F0a ey\u00F0ingu \u00E1 pers\u00F3nuuppl\u00FDsingum \u00FE\u00EDnum me\u00F0 \u00FEv\u00ED a\u00F0 hafa samband vi\u00F0 okkur.',
+          label: 'Engin rakning.',
+          text: 'Vi\u00F0 notum ekki greiningart\u00F3l, augl\u00FDsingarakningu e\u00F0a svipa\u00F0 t\u00F6l til a\u00F0 safna uppl\u00FDsingum um hvernig \u00FE\u00FA notar \u00FEj\u00F3nustuna.',
         },
       ],
       contactPrefix: 'Ef \u00FE\u00FA hefur einhverjar spurningar um \u00FEessa pers\u00F3nuverndarstefnu, vinsamlegast haf\u00F0u samband vi\u00F0 okkur \u00E1 ',
