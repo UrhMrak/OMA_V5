@@ -78,11 +78,17 @@ export default function Stats() {
   const [customEnd, setCustomEnd] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(['dateTime', ...OTHER_COLUMNS.map((c) => c.key)].map((key) => [key, true]))
+    Object.fromEntries(['projectId', 'dateTime', ...OTHER_COLUMNS.map((c) => c.key)].map((key) => [key, true]))
   );
 
   const columns = useMemo<StatsColumn[]>(
     () => [
+      {
+        key: 'projectId',
+        labelKey: 'stats.col.projectId',
+        value: (e) => e.projectId || '',
+        cellClassName: 'stats-nowrap',
+      },
       {
         key: 'dateTime',
         labelKey: 'stats.col.dateTime',

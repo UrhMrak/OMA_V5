@@ -20,6 +20,7 @@ import {
   defaultNewEventRangeISO,
 } from '../lib/date';
 import { downloadMonthICS, downloadWeekICS } from '../lib/ics';
+import { getWeekKeyFromISO, syncProjectIdsForWeeks } from '../lib/projectId';
 
 type ViewMode = 'month' | 'week';
 type Direction = 'left' | 'right';
@@ -50,11 +51,13 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
   const newStartISO = inputValueToISO(inputValue);
   const newEndISO = new Date(Date.parse(newStartISO) + durationMs).toISOString();
 
-  const { id, dateISO, endDateISO, libraryPath: _ignored, ...rest } = source;
+  const { id, dateISO, endDateISO, libraryPath: _ignored, projectId: _projectId, projectIdOverridden: _projectIdOverridden, ...rest } = source;
   void id;
   void dateISO;
   void endDateISO;
   void _ignored;
+  void _projectId;
+  void _projectIdOverridden;
 
   return {
     ...rest,
@@ -132,7 +135,13 @@ export default function CalendarPage() {
   const pasteOnDay = async (day: Date) => {
     if (!copiedEvent || role !== 'admin') return;
     try {
-      await api.post('/api/events', buildPastePayload(copiedEvent, day));
+      const payload = buildPastePayload(copiedEvent, day);
+      await api.post('/api/events', payload);
+      const weekKey = payload.dateISO ? getWeekKeyFromISO(payload.dateISO) : '';
+      if (weekKey) {
+        const freshEvents = await api.get<EventItem[]>('/api/events');
+        await syncProjectIdsForWeeks(freshEvents, [weekKey]);
+      }
       loadEvents();
     } catch (error) {
       console.error('Paste event failed:', error);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { EventItem } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventsContext';
@@ -17,6 +17,13 @@ import {
   formatEventHeadingDateTime,
 } from '../../lib/date';
 import { downloadICS } from '../../lib/ics';
+import {
+  buildCreateFormFromProjectId,
+  computeAutoProjectId,
+  findEventByProjectId,
+  getWeekKeyFromISO,
+  syncProjectIdsForWeeks,
+} from '../../lib/projectId';
 import DeleteIcon from '../icons/DeleteIcon';
 import { useModalClose } from '../Layout/useModalClose';
 import AutoResizeTextarea from '../AutoResizeTextarea';
@@ -74,6 +81,8 @@ function normalizeForm(source?: Partial<EventItem>): Partial<EventItem> {
     dress: '',
     other: '',
     libraryPath: '',
+    projectId: '',
+    projectIdOverridden: false,
     dateISO: defaultRange.dateISO,
     endDateISO: defaultRange.endDateISO,
   };
@@ -110,7 +119,7 @@ export default function EventModal({
   onCopy?: (event: EventItem) => void;
 }) {
   const { role } = useAuth();
-  const { events } = useEvents();
+  const { events, loadEvents } = useEvents();
   const { t, locale } = useLanguage();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
@@ -118,6 +127,7 @@ export default function EventModal({
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? draft));
   const [isDeleting, setIsDeleting] = useState(false);
+  const lastPrefilledProjectIdRef = useRef<string | null>(null);
   const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
@@ -126,6 +136,7 @@ export default function EventModal({
     } else {
       setForm(normalizeForm(draft));
     }
+    lastPrefilledProjectIdRef.current = null;
   }, [event, draft]);
 
   // Lock background scroll while modal is open
@@ -136,14 +147,48 @@ export default function EventModal({
     };
   }, []);
 
+  const displayedProjectId = useMemo(() => {
+    if (form.projectIdOverridden) return form.projectId || '';
+    return computeAutoProjectId(form, events, {
+      eventId: isCreating ? '__draft__' : event?.id,
+      includeDraft: isCreating || !!event?.id,
+    });
+  }, [form, events, isCreating, event?.id]);
+
+  async function syncAffectedWeeks(previousDateISO?: string, nextDateISO?: string) {
+    const weekKeys = [
+      ...new Set(
+        [previousDateISO, nextDateISO]
+          .map((dateISO) => (dateISO ? getWeekKeyFromISO(dateISO) : ''))
+          .filter(Boolean)
+      ),
+    ];
+    if (weekKeys.length === 0) return;
+    const freshEvents = await api.get<EventItem[]>('/api/events');
+    await syncProjectIdsForWeeks(freshEvents, weekKeys);
+    await loadEvents();
+  }
+
   async function save() {
-    const payload = { ...form };
+    const projectId = form.projectIdOverridden
+      ? form.projectId || ''
+      : computeAutoProjectId(form, events, {
+          eventId: isCreating ? '__draft__' : event?.id,
+          includeDraft: isCreating || !!event?.id,
+        });
+    const payload = {
+      ...form,
+      projectId,
+      projectIdOverridden: !!form.projectIdOverridden,
+    };
     rememberLastUsedColor(form.color);
+    const previousDateISO = event?.dateISO;
     if (isCreating) {
       await api.post('/api/events', payload);
     } else if (event) {
       await api.put(`/api/events/${event.id}`, payload);
     }
+    await syncAffectedWeeks(previousDateISO, form.dateISO);
     if (onSave) {
       await Promise.resolve(onSave());
     }
@@ -184,7 +229,13 @@ export default function EventModal({
     if (!confirmed) return;
     setIsDeleting(true);
     try {
+      const weekKey = getWeekKeyFromISO(event.dateISO);
       await api.delete(`/api/events/${event.id}`);
+      if (weekKey) {
+        const freshEvents = await api.get<EventItem[]>('/api/events');
+        await syncProjectIdsForWeeks(freshEvents, [weekKey]);
+        await loadEvents();
+      }
       if (onSave) {
         onSave();
       }
@@ -291,6 +342,84 @@ export default function EventModal({
             onChange={(e) => setForm({ ...form, [key]: e.target.value })}
           />
         )}
+      </div>
+    );
+  }
+
+  function handleProjectIdChange(nextProjectId: string) {
+    setForm((prev) => {
+      const nextForm: Partial<EventItem> = {
+        ...prev,
+        projectId: nextProjectId,
+        projectIdOverridden: true,
+      };
+
+      const trimmedProjectId = nextProjectId.trim();
+      if (!isCreating || !trimmedProjectId) {
+        if (!trimmedProjectId) lastPrefilledProjectIdRef.current = null;
+        return nextForm;
+      }
+
+      if (lastPrefilledProjectIdRef.current === trimmedProjectId) {
+        return nextForm;
+      }
+
+      const sourceEvent = findEventByProjectId(events, trimmedProjectId);
+      if (!sourceEvent) return nextForm;
+
+      lastPrefilledProjectIdRef.current = trimmedProjectId;
+      return normalizeForm(buildCreateFormFromProjectId(sourceEvent, nextForm));
+    });
+  }
+
+  function colorAndProjectIdRow() {
+    const colorValue = form.color || FALLBACK_EVENT_COLOR;
+
+    return (
+      <div className="row-gap event-color-project-row">
+        <div className="event-color-project-fields">
+          <div className="event-color-field">
+            <label className="label">{t('event.color')}</label>
+            <div className="row" style={{ alignItems: 'center' }}>
+              <input
+                className="input"
+                type="color"
+                value={String(colorValue)}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+                style={{ maxWidth: 80, padding: 0 }}
+              />
+              <span
+                className="event-color"
+                style={{ background: String(colorValue), width: 20, height: 20 }}
+              />
+              <input
+                className="input"
+                type="text"
+                value={String(colorValue)}
+                spellCheck={false}
+                maxLength={7}
+                placeholder="#000000"
+                onChange={(e) => {
+                  let next = e.target.value.trim();
+                  if (next && !next.startsWith('#')) next = `#${next}`;
+                  setForm({ ...form, color: next });
+                }}
+                style={{ marginLeft: 8, maxWidth: 100, fontFamily: 'monospace', textTransform: 'uppercase' }}
+              />
+            </div>
+          </div>
+          <div className="event-project-id-field">
+            <label className="label">{t('event.projectId')}</label>
+            <input
+              className="input"
+              type="text"
+              value={displayedProjectId}
+              spellCheck={false}
+              placeholder="26-34-1"
+              onChange={(e) => handleProjectIdChange(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
     );
   }
@@ -453,13 +582,16 @@ export default function EventModal({
             {form.activity ? (
               <div className="event-heading-activity">{form.activity}</div>
             ) : null}
+            {form.projectId ? (
+              <div className="event-heading-project-id">{form.projectId}</div>
+            ) : null}
             {eventHeadingDateTime()}
           </div>
         )}
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {isAdmin && dateRangeRow()}
-            {isAdmin && row(t('event.color'), 'color', 'color')}
+            {isAdmin && colorAndProjectIdRow()}
             {isAdmin && <hr className="modal-divider" />}
             {isAdmin && row(t('event.title'), 'title', 'text', true)}
             {isAdmin && row(t('event.activity'), 'activity', 'text', true)}

@@ -14,6 +14,8 @@ export type EventItem = {
   other?: string;
   endDateISO?: string;
   libraryPath?: string;
+  projectId?: string;
+  projectIdOverridden?: boolean;
 };
 
 export type PostItem = {

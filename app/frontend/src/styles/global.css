@@ -235,6 +235,31 @@ body {
   padding-top: 8px;
   margin: 0;
 }
+.event-heading-project-id {
+  font-weight: 500;
+  font-size: 14px;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.event-color-project-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+.event-color-field,
+.event-project-id-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.event-color-field {
+  flex: 1 1 220px;
+}
+.event-project-id-field {
+  flex: 0 1 160px;
+}
 .event-readonly-value {
   white-space: pre-wrap;
   word-break: break-word;

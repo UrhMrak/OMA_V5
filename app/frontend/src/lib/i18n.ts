@@ -58,6 +58,7 @@ export const en = {
     exportCsv: 'Export CSV',
     rowOpenAria: 'Open event details',
     col: {
+      projectId: 'Project ID',
       dateTime: 'Date & time',
       title: 'Title',
       activity: 'Activity',
@@ -139,6 +140,7 @@ export const en = {
     details: 'Event Details',
     fallbackTitle: 'Event',
     color: 'Color',
+    projectId: 'Project ID',
     title: 'Title',
     activity: 'Activity',
     venue: 'Venue',
@@ -348,6 +350,7 @@ export const is: Translations = {
     exportCsv: 'Flytja \u00FAt CSV',
     rowOpenAria: 'Opna uppl\u00Fdsingar um vi\u00F0bur\u00F0',
     col: {
+      projectId: 'Verkefnisn\u00FAmer',
       dateTime: 'Dagsetning og t\u00EDmi',
       title: 'Titill',
       activity: 'A\u00F0ger\u00F0',
@@ -429,6 +432,7 @@ export const is: Translations = {
     details: 'Uppl\u00Fdsingar um vi\u00F0bur\u00F0',
     fallbackTitle: 'Vi\u00F0bur\u00F0ur',
     color: 'Litur',
+    projectId: 'Verkefnisn\u00FAmer',
     title: 'Titill',
     activity: 'A\u00F0ger\u00F0',
     venue: 'Sta\u00F0setning',
