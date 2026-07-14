@@ -7,11 +7,14 @@ import DeleteIcon from '../icons/DeleteIcon';
 import PdfViewerModal from '../Posts/PdfViewerModal';
 import {
   addRecentLibraryFile,
+  canMoveLibraryItemToFolder,
   formatLibraryPathForDisplay,
   getRecentLibraryFiles,
+  LIBRARY_DRAG_MIME,
   pathToSegments,
   searchLibrary,
   segmentsToLibraryPath,
+  type LibraryDragPayload,
   type RecentLibraryFile,
 } from '../../lib/libraryUtils';
 
@@ -323,6 +326,15 @@ function FolderItem({
   expandSegments = [],
   activeFolderPath = '',
   depth = 0,
+  dragEnabled = false,
+  draggedItem = null,
+  dropTargetPath = null,
+  movingPath = null,
+  onDragStartItem,
+  onDragEndItem,
+  onDragOverFolder,
+  onDragLeaveFolder,
+  onDropOnFolder,
 }: {
   node: LibraryNode;
   onRefresh: () => void;
@@ -331,6 +343,15 @@ function FolderItem({
   expandSegments?: string[];
   activeFolderPath?: string;
   depth?: number;
+  dragEnabled?: boolean;
+  draggedItem?: LibraryDragPayload | null;
+  dropTargetPath?: string | null;
+  movingPath?: string | null;
+  onDragStartItem: (event: React.DragEvent, payload: LibraryDragPayload) => void;
+  onDragEndItem: () => void;
+  onDragOverFolder: (event: React.DragEvent, folderPath: string) => void;
+  onDragLeaveFolder: (folderPath: string) => void;
+  onDropOnFolder: (event: React.DragEvent, folderPath: string) => void;
 }) {
   const { role } = useAuth();
   const { t } = useLanguage();
@@ -341,9 +362,19 @@ function FolderItem({
   const [isRenaming, setIsRenaming] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
+  const expandOnDragTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (shouldExpand) setIsExpanded(true);
   }, [shouldExpand]);
+
+  useEffect(
+    () => () => {
+      if (expandOnDragTimerRef.current !== null) {
+        window.clearTimeout(expandOnDragTimerRef.current);
+      }
+    },
+    []
+  );
 
   const subFolders = (node.children || []).filter((c) => c.type === 'folder');
   const files = (node.children || []).filter((c) => c.type === 'file');
@@ -351,6 +382,30 @@ function FolderItem({
   const childSegments = shouldExpand ? expandSegments.slice(1) : [];
   const deletingThisNode = deletingPath === node.path;
   const isActive = Boolean(node.path && node.path === activeFolderPath);
+  const folderPath = node.path || '';
+  const isDropTarget = Boolean(folderPath && dropTargetPath === folderPath);
+  const isDraggingThis = Boolean(folderPath && draggedItem?.path === folderPath);
+  const isMovingThis = Boolean(folderPath && movingPath === folderPath);
+
+  function clearExpandOnDragTimer() {
+    if (expandOnDragTimerRef.current !== null) {
+      window.clearTimeout(expandOnDragTimerRef.current);
+      expandOnDragTimerRef.current = null;
+    }
+  }
+
+  function handleFolderDragEnter(event: React.DragEvent) {
+    if (!dragEnabled || !folderPath || !draggedItem) return;
+    if (!canMoveLibraryItemToFolder(draggedItem.path, draggedItem.type, folderPath)) return;
+    event.preventDefault();
+    clearExpandOnDragTimer();
+    expandOnDragTimerRef.current = window.setTimeout(() => setIsExpanded(true), 450);
+  }
+
+  function handleFolderDragLeave() {
+    clearExpandOnDragTimer();
+    if (folderPath) onDragLeaveFolder(folderPath);
+  }
 
   const handleDelete = useCallback(
     async (target: LibraryNode) => {
@@ -376,8 +431,22 @@ function FolderItem({
   return (
     <div className="folder-tree-node">
       <div
-        className={`folder-row${isActive ? ' folder-row-active' : ''}`}
+        className={`folder-row${isActive ? ' folder-row-active' : ''}${isDropTarget ? ' folder-row-drop-target' : ''}${isDraggingThis ? ' library-item-dragging' : ''}`}
         style={{ paddingLeft: depth * FOLDER_INDENT }}
+        draggable={dragEnabled && Boolean(node.path) && !isMovingThis}
+        onDragStart={(event) => {
+          if (!node.path) return;
+          onDragStartItem(event, { path: node.path, type: 'folder' });
+        }}
+        onDragEnd={onDragEndItem}
+        onDragEnter={handleFolderDragEnter}
+        onDragOver={(event) => {
+          if (folderPath) onDragOverFolder(event, folderPath);
+        }}
+        onDragLeave={handleFolderDragLeave}
+        onDrop={(event) => {
+          if (folderPath) onDropOnFolder(event, folderPath);
+        }}
         onClick={() => {
           setIsExpanded(!isExpanded);
           if (node.path) onFolderActivate(node.path);
@@ -493,13 +562,28 @@ function FolderItem({
               expandSegments={childSegments}
               activeFolderPath={activeFolderPath}
               depth={depth + 1}
+              dragEnabled={dragEnabled}
+              draggedItem={draggedItem}
+              dropTargetPath={dropTargetPath}
+              movingPath={movingPath}
+              onDragStartItem={onDragStartItem}
+              onDragEndItem={onDragEndItem}
+              onDragOverFolder={onDragOverFolder}
+              onDragLeaveFolder={onDragLeaveFolder}
+              onDropOnFolder={onDropOnFolder}
             />
           ))}
           {files.map((file) => (
             <div
               key={file.path || file.name}
-              className="file-item-row"
+              className={`file-item-row${dragEnabled && file.path ? ' library-draggable' : ''}${draggedItem?.path === file.path ? ' library-item-dragging' : ''}`}
               style={{ paddingLeft: contentIndent }}
+              draggable={dragEnabled && Boolean(file.path) && movingPath !== file.path}
+              onDragStart={(event) => {
+                if (!file.path) return;
+                onDragStartItem(event, { path: file.path, type: 'file' });
+              }}
+              onDragEnd={onDragEndItem}
             >
               <button
                 type="button"
@@ -554,6 +638,9 @@ export default function FolderTree({
   const [viewer, setViewer] = useState<FileViewer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentFiles, setRecentFiles] = useState<RecentLibraryFile[]>(() => getRecentLibraryFiles());
+  const [draggedItem, setDraggedItem] = useState<LibraryDragPayload | null>(null);
+  const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
+  const [movingPath, setMovingPath] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
   const initialSegments = useMemo(() => {
@@ -713,6 +800,84 @@ export default function FolderTree({
     [onRefresh, t]
   );
 
+  const clearDragState = useCallback(() => {
+    setDraggedItem(null);
+    setDropTargetPath(null);
+  }, []);
+
+  const handleDragStartItem = useCallback(
+    (event: React.DragEvent, payload: LibraryDragPayload) => {
+      if (!isAdmin || movingPath) {
+        event.preventDefault();
+        return;
+      }
+      setDraggedItem(payload);
+      event.dataTransfer.setData(LIBRARY_DRAG_MIME, JSON.stringify(payload));
+      event.dataTransfer.effectAllowed = 'move';
+    },
+    [isAdmin, movingPath]
+  );
+
+  const handleDragEndItem = useCallback(() => {
+    clearDragState();
+  }, [clearDragState]);
+
+  const handleDragOverFolder = useCallback(
+    (event: React.DragEvent, folderPath: string) => {
+      if (!isAdmin || !draggedItem) return;
+      if (!canMoveLibraryItemToFolder(draggedItem.path, draggedItem.type, folderPath)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      setDropTargetPath(folderPath);
+    },
+    [draggedItem, isAdmin]
+  );
+
+  const handleDragLeaveFolder = useCallback((folderPath: string) => {
+    setDropTargetPath((current) => (current === folderPath ? null : current));
+  }, []);
+
+  const handleMoveItem = useCallback(
+    async (targetFolderPath: string) => {
+      if (!draggedItem) return;
+      if (!canMoveLibraryItemToFolder(draggedItem.path, draggedItem.type, targetFolderPath)) return;
+
+      setMovingPath(draggedItem.path);
+      try {
+        await api.post('/api/library/move', {
+          path: draggedItem.path,
+          targetFolder: targetFolderPath,
+        });
+        clearDragState();
+        await onRefresh();
+      } catch (error) {
+        const message = error instanceof Error && error.message ? error.message : t('library.moveFailed');
+        alert(message);
+      } finally {
+        setMovingPath(null);
+      }
+    },
+    [clearDragState, draggedItem, onRefresh, t]
+  );
+
+  const handleDropOnFolder = useCallback(
+    (event: React.DragEvent, folderPath: string) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void handleMoveItem(folderPath);
+    },
+    [handleMoveItem]
+  );
+
+  const handleDropOnRoot = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void handleMoveItem('');
+    },
+    [handleMoveItem]
+  );
+
   const children = node.children || [];
   const folderChildren = children.filter((c) => c.type === 'folder');
   const fileChildren = children.filter((c) => c.type === 'file');
@@ -807,8 +972,17 @@ export default function FolderTree({
           <nav className="library-breadcrumbs" aria-label={t('library.breadcrumbs')}>
             <button
               type="button"
-              className={`library-breadcrumb${breadcrumbSegments.length === 0 ? ' active' : ''}`}
+              className={`library-breadcrumb${breadcrumbSegments.length === 0 ? ' active' : ''}${dropTargetPath === '' && draggedItem ? ' library-drop-target' : ''}`}
               onClick={() => navigateToFolder('')}
+              onDragOver={(event) => {
+                if (!isAdmin || !draggedItem) return;
+                if (!canMoveLibraryItemToFolder(draggedItem.path, draggedItem.type, '')) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                setDropTargetPath('');
+              }}
+              onDragLeave={() => setDropTargetPath((current) => (current === '' ? null : current))}
+              onDrop={isAdmin ? handleDropOnRoot : undefined}
             >
               {t('library.breadcrumbsRoot')}
             </button>
@@ -878,6 +1052,15 @@ export default function FolderTree({
                     onFolderActivate={handleFolderActivate}
                     expandSegments={expandSegments}
                     activeFolderPath={activeFolderPath}
+                    dragEnabled={isAdmin}
+                    draggedItem={draggedItem}
+                    dropTargetPath={dropTargetPath}
+                    movingPath={movingPath}
+                    onDragStartItem={handleDragStartItem}
+                    onDragEndItem={handleDragEndItem}
+                    onDragOverFolder={handleDragOverFolder}
+                    onDragLeaveFolder={handleDragLeaveFolder}
+                    onDropOnFolder={handleDropOnFolder}
                   />
                 ))}
               </div>
@@ -885,7 +1068,17 @@ export default function FolderTree({
             {fileChildren.length > 0 && (
               <div className="file-list">
                 {fileChildren.map((file) => (
-                  <div key={file.path || file.name} className="file-item-row" style={{ paddingLeft: 0 }}>
+                  <div
+                    key={file.path || file.name}
+                    className={`file-item-row${isAdmin && file.path ? ' library-draggable' : ''}${draggedItem?.path === file.path ? ' library-item-dragging' : ''}`}
+                    style={{ paddingLeft: 0 }}
+                    draggable={isAdmin && Boolean(file.path) && movingPath !== file.path}
+                    onDragStart={(event) => {
+                      if (!file.path) return;
+                      handleDragStartItem(event, { path: file.path, type: 'file' });
+                    }}
+                    onDragEnd={handleDragEndItem}
+                  >
                     <button
                       type="button"
                       className="file-item file-open-button"

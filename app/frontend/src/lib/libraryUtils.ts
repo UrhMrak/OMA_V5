@@ -66,6 +66,29 @@ export function dirname(filePath: string): string {
   return segmentsToLibraryPath(parts);
 }
 
+export const LIBRARY_DRAG_MIME = 'application/x-oma-library-item';
+
+export type LibraryDragPayload = {
+  path: string;
+  type: 'folder' | 'file';
+};
+
+export function canMoveLibraryItemToFolder(
+  draggedPath: string,
+  draggedType: 'folder' | 'file',
+  targetFolderPath: string
+): boolean {
+  const normalizedTarget = normalizeLibraryPath(targetFolderPath);
+  const normalizedDragged = normalizeLibraryPath(draggedPath);
+  if (!normalizedDragged) return false;
+  if (dirname(normalizedDragged) === normalizedTarget) return false;
+  if (normalizedTarget === normalizedDragged) return false;
+  if (draggedType === 'folder' && normalizedTarget.startsWith(`${normalizedDragged}/`)) {
+    return false;
+  }
+  return true;
+}
+
 export function searchLibrary(node: LibraryNode, query: string): LibrarySearchResult[] {
   const term = query.trim().toLowerCase();
   if (!term) return [];

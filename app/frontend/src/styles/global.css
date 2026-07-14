@@ -236,8 +236,8 @@ body {
   margin: 0;
 }
 .event-heading-project-id {
-  font-weight: 500;
-  font-size: 14px;
+  font-weight: 400;
+  font-size: 12px;
   margin-top: 4px;
   color: var(--muted);
 }
@@ -1599,6 +1599,21 @@ body.modal-open {
 }
 .folder-row-active {
   background: var(--accent-soft);
+}
+.folder-row-drop-target,
+.library-drop-target {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+}
+.library-draggable {
+  cursor: grab;
+}
+.library-draggable:active {
+  cursor: grabbing;
+}
+.library-item-dragging {
+  opacity: 0.45;
 }
 .stats-columns {
   display: flex;

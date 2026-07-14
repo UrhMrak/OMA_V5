@@ -441,6 +441,73 @@ router.post('/rename', requireAdmin, async (req, res) => {
   res.json({ ok: true, path: newPath });
 });
 
+function lastPathSegment(p: string): string {
+  const parts = p.split('/');
+  return parts[parts.length - 1] || p;
+}
+
+router.post('/move', requireAdmin, async (req, res) => {
+  const rel = normalizePath(String(req.body.path || ''));
+  const targetFolder = normalizePath(String(req.body.targetFolder ?? req.body.destination ?? ''));
+  if (!rel) return res.status(400).send('path required');
+  if (!isSafePath(rel)) return res.status(400).send('Invalid path');
+  if (targetFolder && !isSafePath(targetFolder)) return res.status(400).send('Invalid target folder');
+
+  const currentParent = parentPath(rel);
+  if (currentParent === targetFolder) return res.json({ ok: true, path: rel });
+
+  const { data: item } = await supabase.from(TABLE).select('*').eq('path', rel).maybeSingle();
+  if (!item) return res.status(404).send('Not found');
+
+  if (item.type === 'folder' && (targetFolder === rel || targetFolder.startsWith(`${rel}/`))) {
+    return res.status(400).send('Cannot move folder into itself or a subfolder');
+  }
+
+  const segment = lastPathSegment(rel);
+  const newPath = targetFolder ? `${targetFolder}/${segment}` : segment;
+  if (newPath === rel) return res.json({ ok: true, path: rel });
+
+  const { data: conflict } = await supabase
+    .from(TABLE)
+    .select('id')
+    .eq('path', newPath)
+    .maybeSingle();
+  if (conflict) return res.status(409).send('An item with that name already exists in the destination folder');
+
+  if (targetFolder) await ensureFolders(targetFolder);
+
+  if (item.type === 'folder') {
+    const { data: descendants } = await supabase
+      .from(TABLE)
+      .select('*')
+      .like('path', `${rel}/%`);
+    const rows = (descendants || []) as LibraryRow[];
+
+    const { error: moveError } = await supabase
+      .from(TABLE)
+      .update({ path: newPath })
+      .eq('id', item.id);
+    if (moveError) return res.status(500).send(moveError.message);
+
+    for (const row of rows) {
+      const updatedPath = `${newPath}${row.path.slice(rel.length)}`;
+      const { error: childError } = await supabase
+        .from(TABLE)
+        .update({ path: updatedPath })
+        .eq('id', row.id);
+      if (childError) return res.status(500).send(childError.message);
+    }
+  } else {
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ path: newPath })
+      .eq('id', item.id);
+    if (error) return res.status(500).send(error.message);
+  }
+
+  res.json({ ok: true, path: newPath });
+});
+
 router.get('/download', requireAuth, async (req, res) => {
   const rel = normalizePath(String(req.query.path || ''));
   if (!rel || !isSafePath(rel)) return res.status(400).send('Invalid path');

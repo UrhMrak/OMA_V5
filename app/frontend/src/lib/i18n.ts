@@ -134,6 +134,8 @@ export const en = {
     recentFiles: 'Recently opened',
     openFolderAction: 'Open folder',
     inFolder: 'in {folder}',
+    moveFailed: 'Move failed. Please try again.',
+    dragToMove: 'Drag to move into another folder',
   },
   event: {
     create: 'Create Event',
@@ -426,6 +428,8 @@ export const is: Translations = {
     recentFiles: 'N\u00FDlega opna\u00F0',
     openFolderAction: 'Opna m\u00F6ppu',
     inFolder: '\u00ED {folder}',
+    moveFailed: 'Flutningur mist\u00F3kst. Reyndu aftur.',
+    dragToMove: 'Drag\u00F0u til a\u00F0 f\u00E6ra \u00ED a\u00F0ra m\u00F6ppu',
   },
   event: {
     create: 'Stofna vi\u00F0bur\u00F0',
