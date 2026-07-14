@@ -235,6 +235,16 @@ body {
   padding-top: 8px;
   margin: 0;
 }
+.event-modal-saving {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  transform: translateX(-50%);
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
 .event-heading-project-id {
   font-weight: 400;
   font-size: 12px;
@@ -799,6 +809,7 @@ body {
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
+  position: relative;
   animation: modalEnter 0.3s ease-out;
 }
 .modal.closing {

@@ -127,6 +127,7 @@ export default function EventModal({
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? draft));
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const lastPrefilledProjectIdRef = useRef<string | null>(null);
   const { closing, requestClose } = useModalClose(onClose);
 
@@ -170,29 +171,39 @@ export default function EventModal({
   }
 
   async function save() {
-    const projectId = form.projectIdOverridden
-      ? form.projectId || ''
-      : computeAutoProjectId(form, events, {
-          eventId: isCreating ? '__draft__' : event?.id,
-          includeDraft: isCreating || !!event?.id,
-        });
-    const payload = {
-      ...form,
-      projectId,
-      projectIdOverridden: !!form.projectIdOverridden,
-    };
-    rememberLastUsedColor(form.color);
-    const previousDateISO = event?.dateISO;
-    if (isCreating) {
-      await api.post('/api/events', payload);
-    } else if (event) {
-      await api.put(`/api/events/${event.id}`, payload);
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const projectId = form.projectIdOverridden
+        ? form.projectId || ''
+        : computeAutoProjectId(form, events, {
+            eventId: isCreating ? '__draft__' : event?.id,
+            includeDraft: isCreating || !!event?.id,
+          });
+      const payload = {
+        ...form,
+        projectId,
+        projectIdOverridden: !!form.projectIdOverridden,
+      };
+      rememberLastUsedColor(form.color);
+      const previousDateISO = event?.dateISO;
+      if (isCreating) {
+        await api.post('/api/events', payload);
+      } else if (event) {
+        await api.put(`/api/events/${event.id}`, payload);
+      }
+      await syncAffectedWeeks(previousDateISO, form.dateISO);
+      if (onSave) {
+        await Promise.resolve(onSave());
+      }
+      requestClose();
+    } catch (error) {
+      console.error('Save event failed:', error);
+      const message = error instanceof Error && error.message ? error.message : t('event.saveFailed');
+      alert(message);
+    } finally {
+      setIsSaving(false);
     }
-    await syncAffectedWeeks(previousDateISO, form.dateISO);
-    if (onSave) {
-      await Promise.resolve(onSave());
-    }
-    requestClose();
   }
 
   function renderEditableTextarea(
@@ -425,7 +436,9 @@ export default function EventModal({
   }
 
   function eventHeadingDateTime() {
-    const text = formatEventHeadingDateTime(form.dateISO, form.endDateISO, locale);
+    const text = formatEventHeadingDateTime(form.dateISO, form.endDateISO, locale, {
+      includeWeekday: true,
+    });
     if (!text) return null;
     return <div className="event-heading-datetime">{text}</div>;
   }
@@ -641,12 +654,17 @@ export default function EventModal({
             )}
             <button className="btn" onClick={requestClose}>{t('event.close')}</button>
             {role === 'admin' && (
-              <button className="btn primary" onClick={save}>
+              <button className="btn primary" onClick={() => void save()} disabled={isSaving}>
                 {isCreating ? t('event.createBtn') : t('event.save')}
               </button>
             )}
           </div>
         </div>
+        {isAdmin && isSaving ? (
+          <div className="event-modal-saving" aria-live="polite">
+            {t('event.saving')}
+          </div>
+        ) : null}
       </div>
     </div>
   );

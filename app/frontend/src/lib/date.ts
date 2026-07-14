@@ -29,11 +29,15 @@ export function formatWallTime(iso: string | null | undefined): string {
 export function formatEventHeadingDateTime(
   startISO: string | null | undefined,
   endISO: string | null | undefined,
-  locale?: string
+  locale?: string,
+  options?: { includeWeekday?: boolean }
 ): string {
   const start = isoToWallDate(startISO);
   if (Number.isNaN(start.getTime())) return '';
 
+  const weekdayText = options?.includeWeekday
+    ? start.toLocaleDateString(locale, { weekday: 'long' })
+    : '';
   const dateText = start.toLocaleDateString(locale, {
     day: 'numeric',
     month: 'numeric',
@@ -42,9 +46,13 @@ export function formatEventHeadingDateTime(
   const startTime = formatWallTime(startISO);
   const endTime = formatWallTime(endISO);
 
-  if (startTime && endTime) return `${dateText}, ${startTime} - ${endTime}`;
-  if (startTime) return `${dateText}, ${startTime}`;
-  return dateText;
+  let result = '';
+  if (startTime && endTime) result = `${dateText}, ${startTime} - ${endTime}`;
+  else if (startTime) result = `${dateText}, ${startTime}`;
+  else result = dateText;
+
+  if (weekdayText) return `${weekdayText}, ${result}`;
+  return result;
 }
 
 export function isoToInputValue(iso: string | null | undefined): string {
