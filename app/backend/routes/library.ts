@@ -38,6 +38,7 @@ type LibraryNode = {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_UPLOAD_FILE_SIZE_BYTES },
+  preservePath: true,
 });
 
 function isInlineMime(mime: string | null | undefined): boolean {

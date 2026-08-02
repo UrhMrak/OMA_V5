@@ -112,11 +112,58 @@ async function request<T>(method: Method, url: string, body?: any, headers?: Rec
   }
 }
 
+export type UploadProgressHandler = (percent: number) => void;
+
+function uploadWithProgressRequest<T>(
+  url: string,
+  form: FormData,
+  onProgress?: UploadProgressHandler
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const resolvedUrl = resolveUrl(url);
+
+    xhr.open('POST', resolvedUrl);
+    const token = getToken();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const ct = xhr.getResponseHeader('content-type') || '';
+        if (ct.includes('application/json')) {
+          try {
+            resolve(JSON.parse(xhr.responseText) as T);
+          } catch {
+            reject(new Error('Invalid JSON response'));
+          }
+        } else {
+          resolve(xhr.responseText as unknown as T);
+        }
+        return;
+      }
+      reject(new Error(xhr.responseText || xhr.statusText));
+    };
+
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.onabort = () => reject(new Error('Upload aborted'));
+
+    xhr.send(form);
+  });
+}
+
 export const api = {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T = any>(url: string, body: any) => request<T>('POST', url, body),
   put: <T = any>(url: string, body: any) => request<T>('PUT', url, body),
   delete: <T = any>(url: string) => request<T>('DELETE', url),
   upload: <T = any>(url: string, form: FormData) => request<T>('POST', url, form),
+  uploadWithProgress: <T = any>(url: string, form: FormData, onProgress?: UploadProgressHandler) =>
+    uploadWithProgressRequest<T>(url, form, onProgress),
   uploadPut: <T = any>(url: string, form: FormData) => request<T>('PUT', url, form),
 };

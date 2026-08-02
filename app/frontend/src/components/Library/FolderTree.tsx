@@ -222,6 +222,8 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProcessing, setUploadProcessing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -243,6 +245,8 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
     if (selected.length === 0) return;
 
     setBusy(true);
+    setUploadProgress(0);
+    setUploadProcessing(false);
     setError('');
     setSuccess('');
     try {
@@ -255,7 +259,10 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
           form.append('files', file);
         }
       }
-      await api.upload('/api/library/upload', form);
+      await api.uploadWithProgress('/api/library/upload', form, (percent) => {
+        setUploadProgress(percent);
+        if (percent >= 100) setUploadProcessing(true);
+      });
       setSuccess(t('library.uploadSuccess'));
       if (onSuccess) onSuccess();
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -269,6 +276,8 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
       setError(message);
     } finally {
       setBusy(false);
+      setUploadProgress(0);
+      setUploadProcessing(false);
     }
   }
 
@@ -310,6 +319,16 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
         onChange={(e) => handleUpload(e.target.files, true)}
         {...({ webkitdirectory: 'true', directory: 'true' } as React.InputHTMLAttributes<HTMLInputElement>)}
       />
+      {busy && (
+        <div className="upload-progress">
+          <div className="upload-progress-bar" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100}>
+            <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+          </div>
+          <span className="upload-progress-label">
+            {uploadProcessing ? t('library.uploadProcessing') : `${uploadProgress}%`}
+          </span>
+        </div>
+      )}
       {error && <div className="error" style={{ fontSize: '11px', marginTop: '4px' }}>{error}</div>}
       {success && !error && (
         <div className="small" style={{ color: '#16a34a', fontSize: '11px', marginTop: '4px' }}>{success}</div>
