@@ -342,7 +342,7 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
           aria-expanded={menuOpen}
           aria-haspopup="menu"
         >
-          <FolderChevron expanded={menuOpen} />
+          <ChevronIcon expanded={menuOpen} />
         </button>
         {menuOpen && (
           <div className="upload-button-dropdown" role="menu">
