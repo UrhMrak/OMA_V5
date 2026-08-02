@@ -1342,10 +1342,12 @@ body.modal-open {
   max-height: calc(
     (13px * var(--text-scale, 1) * 1.5 * var(--news-preview-lines)) + 10px
   );
-  transition: max-height 0.55s ease;
+  transition:
+    max-height 0.65s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.65s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .news-post-collapsible.is-expanded .news-post-collapsible-content {
-  max-height: 4000px;
+  max-height: none;
 }
 .news-post-collapsible:not(.is-expanded) .news-content {
   display: -webkit-box;
@@ -1354,13 +1356,14 @@ body.modal-open {
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  transition: opacity 0.65s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .news-post-collapsible.is-expanded .news-content {
   display: block;
   -webkit-line-clamp: unset;
   overflow: visible;
 }
-.news-post-collapsible:not(.is-expanded) .news-post-collapsible-content::after {
+.news-post-collapsible-content::after {
   content: '';
   position: absolute;
   left: 0;
@@ -1373,19 +1376,28 @@ body.modal-open {
     color-mix(in srgb, var(--card) 35%, transparent) 45%,
     var(--card) 100%
   );
+  opacity: 1;
   pointer-events: none;
+  transition: opacity 0.65s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.news-post-collapsible.is-expanded .news-post-collapsible-content::after {
+  opacity: 0;
 }
 .news-post-collapsible:not(.is-expanded) .news-post-attachments-wrap {
   visibility: hidden;
   height: 0;
   overflow: hidden;
+  transition: opacity 0.65s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .news-toggle-btn {
   width: 100%;
   margin-top: 8px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .news-post-collapsible-content {
+  .news-post-collapsible-content,
+  .news-post-collapsible-content::after,
+  .news-post-collapsible:not(.is-expanded) .news-content,
+  .news-post-collapsible:not(.is-expanded) .news-post-attachments-wrap {
     transition: none;
   }
 }

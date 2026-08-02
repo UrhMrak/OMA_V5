@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PostItem } from '../../lib/types';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -17,11 +17,126 @@ type AttachmentViewer = {
   loading: boolean;
 };
 
-const INITIAL_VISIBLE_COUNT = 1;
-const POSTS_PER_LOAD = 1;
+const MUSICIAN_INITIAL_VISIBLE_COUNT = 3;
+const MUSICIAN_POSTS_PER_LOAD = 1;
+const NEWS_PREVIEW_LINES = 4;
 
 function shouldCollapsePost(post: PostItem): boolean {
   return Boolean(post.content.trim()) || (post.attachments?.length ?? 0) > 0;
+}
+
+function getTextScale(): number {
+  const main = document.querySelector('main.container');
+  if (!main) return 1;
+  const scale = parseFloat(getComputedStyle(main).getPropertyValue('--text-scale'));
+  return Number.isFinite(scale) ? scale : 1;
+}
+
+function getCollapsedContentMaxHeight(hasContent: boolean): number {
+  if (!hasContent) return 0;
+  return 13 * getTextScale() * 1.5 * NEWS_PREVIEW_LINES + 10;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+type MusicianCollapsiblePostBodyProps = {
+  post: PostItem;
+  isExpanded: boolean;
+  onExpand: () => void;
+  onCollapse: () => void;
+  openLabel: string;
+  closeLabel: string;
+  renderContent: (text: string) => React.ReactNode;
+  renderAttachments: (post: PostItem) => React.ReactNode;
+};
+
+function MusicianCollapsiblePostBody({
+  post,
+  isExpanded,
+  onExpand,
+  onCollapse,
+  openLabel,
+  closeLabel,
+  renderContent,
+  renderAttachments,
+}: MusicianCollapsiblePostBodyProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentMaxHeight, setContentMaxHeight] = useState<number | undefined>(() =>
+    getCollapsedContentMaxHeight(Boolean(post.content.trim()))
+  );
+  const hasContent = Boolean(post.content.trim());
+
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el || prefersReducedMotion()) {
+      setContentMaxHeight(undefined);
+      return;
+    }
+
+    if (!isExpanded) {
+      setContentMaxHeight(getCollapsedContentMaxHeight(hasContent));
+    }
+  }, [isExpanded, hasContent, post.content, post.attachments]);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || !isExpanded || prefersReducedMotion()) return;
+
+    const observer = new ResizeObserver(() => {
+      setContentMaxHeight(el.scrollHeight);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isExpanded]);
+
+  function handleToggle() {
+    const el = contentRef.current;
+    if (!el || prefersReducedMotion()) {
+      if (isExpanded) onCollapse();
+      else onExpand();
+      return;
+    }
+
+    const collapsedHeight = getCollapsedContentMaxHeight(hasContent);
+
+    if (isExpanded) {
+      setContentMaxHeight(el.scrollHeight);
+      requestAnimationFrame(() => {
+        setContentMaxHeight(collapsedHeight);
+        onCollapse();
+      });
+      return;
+    }
+
+    onExpand();
+    requestAnimationFrame(() => {
+      const expandedEl = contentRef.current;
+      if (expandedEl) setContentMaxHeight(expandedEl.scrollHeight);
+    });
+  }
+
+  return (
+    <div className={`news-post-collapsible${isExpanded ? ' is-expanded' : ''}`}>
+      <div
+        ref={contentRef}
+        className="news-post-collapsible-content"
+        style={contentMaxHeight !== undefined ? { maxHeight: `${contentMaxHeight}px` } : undefined}
+      >
+        {hasContent && <p className="news-content">{renderContent(post.content)}</p>}
+        <div className="news-post-attachments-wrap">{renderAttachments(post)}</div>
+      </div>
+      <button
+        type="button"
+        className="btn news-toggle-btn"
+        aria-expanded={isExpanded}
+        onClick={handleToggle}
+      >
+        {isExpanded ? closeLabel : openLabel}
+      </button>
+    </div>
+  );
 }
 
 export default function NewsList() {
@@ -33,7 +148,7 @@ export default function NewsList() {
   const editFileInputRef = useRef<HTMLInputElement | null>(null);
   const [viewer, setViewer] = useState<AttachmentViewer | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+  const [visibleCount, setVisibleCount] = useState(MUSICIAN_INITIAL_VISIBLE_COUNT);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
@@ -166,8 +281,9 @@ export default function NewsList() {
   useEffect(() => {
     wasIntersectingRef.current = null;
     autoLoadEnabledRef.current = false;
-    setVisibleCount(INITIAL_VISIBLE_COUNT);
-  }, [posts]);
+    if (isAdmin) return;
+    setVisibleCount(MUSICIAN_INITIAL_VISIBLE_COUNT);
+  }, [posts, isAdmin]);
 
   useEffect(() => {
     function onScroll() {
@@ -181,11 +297,13 @@ export default function NewsList() {
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => {
       if (prev >= posts.length) return prev;
-      return Math.min(prev + POSTS_PER_LOAD, posts.length);
+      return Math.min(prev + MUSICIAN_POSTS_PER_LOAD, posts.length);
     });
   }, [posts.length]);
 
   useEffect(() => {
+    if (isAdmin) return;
+
     const button = loadMoreRef.current;
     if (!button || visibleCount >= posts.length) return;
 
@@ -213,7 +331,7 @@ export default function NewsList() {
 
     observer.observe(button);
     return () => observer.disconnect();
-  }, [visibleCount, posts.length, loadMore]);
+  }, [visibleCount, posts.length, loadMore, isAdmin]);
 
   async function addPost() {
     if (!title.trim()) return;
@@ -330,20 +448,16 @@ export default function NewsList() {
     const isExpanded = expandedPostIds.has(post.id);
 
     return (
-      <div className={`news-post-collapsible${isExpanded ? ' is-expanded' : ''}`}>
-        <div className="news-post-collapsible-content">
-          {post.content.trim() && <p className="news-content">{renderContent(post.content)}</p>}
-          <div className="news-post-attachments-wrap">{renderAttachments(post)}</div>
-        </div>
-        <button
-          type="button"
-          className="btn news-toggle-btn"
-          aria-expanded={isExpanded}
-          onClick={() => (isExpanded ? collapsePost(post.id) : expandPost(post.id))}
-        >
-          {isExpanded ? t('news.close') : t('news.open')}
-        </button>
-      </div>
+      <MusicianCollapsiblePostBody
+        post={post}
+        isExpanded={isExpanded}
+        onExpand={() => expandPost(post.id)}
+        onCollapse={() => collapsePost(post.id)}
+        openLabel={t('news.open')}
+        closeLabel={t('news.close')}
+        renderContent={renderContent}
+        renderAttachments={renderAttachments}
+      />
     );
   }
 
@@ -431,7 +545,7 @@ export default function NewsList() {
         <SkeletonCardList count={3} />
       ) : (
       <ul className="card-list">
-        {posts.slice(0, visibleCount).map((p) => (
+        {(isAdmin ? posts : posts.slice(0, visibleCount)).map((p) => (
           <li key={p.id} className="card">
             {editingId === p.id ? (
               <div className="row-gap">
@@ -482,7 +596,7 @@ export default function NewsList() {
         ))}
       </ul>
       )}
-      {loaded && visibleCount < posts.length && (
+      {loaded && !isAdmin && visibleCount < posts.length && (
         <button
           ref={loadMoreRef}
           type="button"
