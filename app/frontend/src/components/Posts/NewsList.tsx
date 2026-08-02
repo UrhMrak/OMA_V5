@@ -19,7 +19,8 @@ type AttachmentViewer = {
 
 const INITIAL_VISIBLE_COUNT = 3;
 const POSTS_PER_LOAD = 1;
-const NEWS_PREVIEW_LINES = 5;
+const NEWS_PREVIEW_LINES = 3;
+const NEWS_TOGGLE_BTN_OVERLAP = 52;
 const COLLAPSE_TRANSITION_MS = 650;
 
 function shouldCollapsePost(post: PostItem): boolean {
@@ -35,7 +36,7 @@ function getTextScale(): number {
 
 function getCollapsedContentMaxHeight(hasContent: boolean): number {
   if (!hasContent) return 0;
-  return 13 * getTextScale() * 1.5 * NEWS_PREVIEW_LINES + 10;
+  return 13 * getTextScale() * 1.5 * NEWS_PREVIEW_LINES + 10 + NEWS_TOGGLE_BTN_OVERLAP;
 }
 
 function prefersReducedMotion(): boolean {
@@ -223,6 +224,7 @@ export default function NewsList() {
   const [editRemovedAttachmentIds, setEditRemovedAttachmentIds] = useState<string[]>([]);
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(() => new Set());
   const objectUrlRef = useRef<string | null>(null);
+  const postCardRefs = useRef<Record<string, HTMLLIElement | null>>({});
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const wasIntersectingRef = useRef<boolean | null>(null);
   const autoLoadEnabledRef = useRef(false);
@@ -491,12 +493,23 @@ export default function NewsList() {
     });
   }
 
+  function scrollPostIntoView(id: string) {
+    const postCard = postCardRefs.current[id];
+    if (!postCard) return;
+
+    postCard.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }
+
   function collapsePost(id: string) {
     setExpandedPostIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
     });
+    requestAnimationFrame(() => scrollPostIntoView(id));
   }
 
   function renderPostBody(post: PostItem) {
@@ -610,7 +623,13 @@ export default function NewsList() {
       ) : (
       <ul className="card-list">
         {posts.slice(0, visibleCount).map((p) => (
-          <li key={p.id} className="card">
+          <li
+            key={p.id}
+            className="card news-post-card"
+            ref={(el) => {
+              postCardRefs.current[p.id] = el;
+            }}
+          >
             {editingId === p.id ? (
               <div className="row-gap">
                 <div className="news-admin-actions">

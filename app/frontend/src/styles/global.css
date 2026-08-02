@@ -1335,6 +1335,9 @@ body.modal-open {
     min-width: 0;
   }
 }
+.news-post-card {
+  scroll-margin-top: 56px;
+}
 .news-content {
   font-size: 13px;
   line-height: 1.5;
@@ -1345,8 +1348,10 @@ body.modal-open {
   overflow-wrap: anywhere;
 }
 .news-post-collapsible {
-  --news-preview-lines: 5;
-  --news-toggle-btn-height: 32px;
+  --news-preview-lines: 3;
+  --news-toggle-btn-height: 36px;
+  --news-toggle-btn-overlap: 52px;
+  --news-fade-height: calc(2.75em + var(--news-toggle-btn-overlap));
   position: relative;
   margin-top: 6px;
 }
@@ -1354,15 +1359,14 @@ body.modal-open {
   position: relative;
   overflow: hidden;
   max-height: calc(
-    (13px * var(--text-scale, 1) * 1.5 * var(--news-preview-lines)) + 10px
+    (13px * var(--text-scale, 1) * 1.5 * var(--news-preview-lines)) + 10px +
+      var(--news-toggle-btn-overlap)
   );
   transition: max-height 0.65s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .news-post-collapsible:not(.is-expanded) .news-content {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: var(--news-preview-lines);
-  overflow: hidden;
+  display: block;
+  overflow: visible;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -1377,12 +1381,13 @@ body.modal-open {
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(2.5em + var(--news-toggle-btn-height));
+  height: var(--news-fade-height);
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    color-mix(in srgb, var(--card) 40%, transparent) 35%,
-    var(--card) calc(100% - var(--news-toggle-btn-height)),
+    color-mix(in srgb, var(--card) 20%, transparent) 28%,
+    color-mix(in srgb, var(--card) 52%, transparent) 56%,
+    color-mix(in srgb, var(--card) 82%, transparent) 82%,
     var(--card) 100%
   );
   opacity: 1;
@@ -1408,14 +1413,16 @@ body.modal-open {
 .news-toggle-btn {
   width: auto;
   min-width: 0;
-  padding: 6px 14px;
+  padding: 8px 18px;
+  position: relative;
   z-index: 2;
+  background: var(--surface);
 }
 .news-post-collapsible:not(.is-expanded) .news-toggle-btn,
 .news-post-collapsible.is-expanded.is-closing .news-toggle-btn {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 3px;
   transform: translateX(-50%);
   margin-top: 0;
 }
@@ -2041,6 +2048,12 @@ main.container[data-text-size='extra-large'] {
 
 main.container .h2 {
   font-size: calc(22px * var(--text-scale));
+}
+
+@media (max-width: 480px) {
+  main.container .dashboard-section-title {
+    font-size: calc(19px * var(--text-scale));
+  }
 }
 
 main.container .h3 {

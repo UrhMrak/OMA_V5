@@ -94,13 +94,13 @@ export default function Dashboard() {
   return (
     <div className="grid grid-2 dashboard-grid">
       <section className="dashboard-news">
-        <h2 className="h2">{t('dashboard.latestNews')}</h2>
+        <h2 className="h2 dashboard-section-title">{t('dashboard.latestNews')}</h2>
         <NewsList />
       </section>
       <section className="dashboard-events">
-        <h2 className="h2">{t('dashboard.todayEvents')}</h2>
+        <h2 className="h2 dashboard-section-title">{t('dashboard.todayEvents')}</h2>
         {renderEventList(todayEvents, t('dashboard.noToday'), true)}
-        <h2 className="h2" style={{ marginTop: 24 }}>{t('dashboard.tomorrowEvents')}</h2>
+        <h2 className="h2 dashboard-section-title" style={{ marginTop: 24 }}>{t('dashboard.tomorrowEvents')}</h2>
         {renderEventList(tomorrowEvents, t('dashboard.noTomorrow'))}
       </section>
       {selectedEvent && (
