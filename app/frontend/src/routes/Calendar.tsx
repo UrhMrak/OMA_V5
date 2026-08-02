@@ -51,18 +51,22 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
   const newStartISO = inputValueToISO(inputValue);
   const newEndISO = new Date(Date.parse(newStartISO) + durationMs).toISOString();
 
-  const { id, dateISO, endDateISO, libraryPath: _ignored, projectId: _projectId, projectIdOverridden: _projectIdOverridden, ...rest } = source;
+  const { id, dateISO, endDateISO, libraryPath: _ignored, projectId, projectIdOverridden: _projectIdOverridden, ...rest } = source;
   void id;
   void dateISO;
   void endDateISO;
   void _ignored;
-  void _projectId;
   void _projectIdOverridden;
+
+  const normalizedProjectId = (projectId || '').trim();
 
   return {
     ...rest,
     dateISO: newStartISO,
     endDateISO: newEndISO,
+    ...(normalizedProjectId
+      ? { projectId: normalizedProjectId, projectIdOverridden: true }
+      : {}),
   };
 }
 

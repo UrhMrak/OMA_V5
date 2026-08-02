@@ -123,6 +123,7 @@ export default function EventModal({
   const { t, locale } = useLanguage();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
+  const closeOnlyViaButton = isAdmin && !isCreating;
   const fieldSuggestions = useMemo(() => buildEventFieldSuggestions(events), [events]);
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? draft));
@@ -581,7 +582,10 @@ export default function EventModal({
   };
 
   return (
-    <div className={`modal-backdrop ${closing ? 'closing' : ''}`} onClick={requestClose}>
+    <div
+      className={`modal-backdrop ${closing ? 'closing' : ''}`}
+      onClick={closeOnlyViaButton ? undefined : requestClose}
+    >
       <div
         className={`modal ${closing ? 'closing' : ''}`}
         style={modalStyle}
@@ -645,7 +649,12 @@ export default function EventModal({
               <button
                 className="btn"
                 onClick={() => {
-                  onCopy(event);
+                  onCopy({
+                    ...event,
+                    ...(displayedProjectId
+                      ? { projectId: displayedProjectId, projectIdOverridden: true }
+                      : {}),
+                  });
                   requestClose();
                 }}
               >
