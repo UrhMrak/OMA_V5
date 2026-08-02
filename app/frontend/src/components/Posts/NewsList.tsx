@@ -18,7 +18,7 @@ type AttachmentViewer = {
 };
 
 const INITIAL_VISIBLE_COUNT = 3;
-const POSTS_PER_LOAD = 1;
+const POSTS_PER_LOAD = 3;
 const NEWS_PREVIEW_LINES = 3;
 const NEWS_TOGGLE_BTN_OVERLAP = 52;
 const COLLAPSE_TRANSITION_MS = 650;

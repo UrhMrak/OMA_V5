@@ -119,13 +119,34 @@ export function searchLibrary(node: LibraryNode, query: string): LibrarySearchRe
   });
 }
 
+function canonicalRecentPath(path: string): string {
+  return segmentsToLibraryPath(splitLibraryPath(path));
+}
+
+function dedupeRecentFiles(items: RecentLibraryFile[]): RecentLibraryFile[] {
+  const byPath = new Map<string, RecentLibraryFile>();
+
+  for (const item of items) {
+    if (!item.path) continue;
+    const key = canonicalRecentPath(item.path);
+    const existing = byPath.get(key);
+    if (!existing || item.openedAt > existing.openedAt) {
+      byPath.set(key, { path: key, name: item.name, openedAt: item.openedAt });
+    }
+  }
+
+  return [...byPath.values()]
+    .sort((a, b) => b.openedAt - a.openedAt)
+    .slice(0, MAX_RECENT);
+}
+
 export function getRecentLibraryFiles(): RecentLibraryFile[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(RECENT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as RecentLibraryFile[];
-    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
+    return dedupeRecentFiles(Array.isArray(parsed) ? parsed : []);
   } catch {
     return [];
   }
@@ -134,9 +155,12 @@ export function getRecentLibraryFiles(): RecentLibraryFile[] {
 export function addRecentLibraryFile(file: LibraryNode): void {
   if (typeof window === 'undefined' || !file.path) return;
   try {
-    const existing = getRecentLibraryFiles().filter((item) => item.path !== file.path);
+    const path = canonicalRecentPath(file.path);
+    const existing = getRecentLibraryFiles().filter(
+      (item) => canonicalRecentPath(item.path) !== path
+    );
     const next: RecentLibraryFile[] = [
-      { path: file.path, name: file.name, openedAt: Date.now() },
+      { path, name: file.name, openedAt: Date.now() },
       ...existing,
     ].slice(0, MAX_RECENT);
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
