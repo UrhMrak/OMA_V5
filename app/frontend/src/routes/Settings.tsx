@@ -2,6 +2,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useEventSize } from '../context/EventSizeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppPreferences, LandingPage, CalendarView } from '../context/AppPreferencesContext';
+import { useTextSize, TextSize } from '../context/TextSizeContext';
+
+const TEXT_SIZE_OPTIONS: Array<{ value: TextSize; labelKey: string }> = [
+  { value: 'default', labelKey: 'settings.textSizeDefault' },
+  { value: 'large', labelKey: 'settings.textSizeLarge' },
+  { value: 'extra-large', labelKey: 'settings.textSizeExtraLarge' },
+];
 
 const LANDING_OPTIONS: Array<{ value: LandingPage; labelKey: string }> = [
   { value: '/', labelKey: 'settings.landingDashboard' },
@@ -13,6 +20,7 @@ const LANDING_OPTIONS: Array<{ value: LandingPage; labelKey: string }> = [
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const { eventSize, toggleEventSize } = useEventSize();
+  const { textSize, setTextSize } = useTextSize();
   const { language, setLanguage, t } = useLanguage();
   const {
     defaultCalendarView,
@@ -51,6 +59,31 @@ export default function Settings() {
           >
             <span className="theme-switch-thumb" />
           </button>
+        </div>
+        <div className="row-between settings-preference-row">
+          <div>
+            <div className="card-title">{t('settings.textSize')}</div>
+            <p className="muted small" style={{ margin: 0 }}>
+              {t('settings.textSizeDesc')}
+            </p>
+          </div>
+          <div
+            className="calendar-view-toggle calendar-view-toggle--compact settings-text-size-toggle"
+            role="group"
+            aria-label={t('settings.textSize')}
+          >
+            {TEXT_SIZE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={textSize === option.value ? 'active' : ''}
+                aria-pressed={textSize === option.value}
+                onClick={() => setTextSize(option.value)}
+              >
+                {t(option.labelKey)}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

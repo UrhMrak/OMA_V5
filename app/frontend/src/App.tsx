@@ -11,12 +11,15 @@ import Login from './routes/Auth/Login';
 import TopNav from './components/Layout/TopNav';
 import Footer from './components/Layout/Footer';
 import PageTransition from './components/Layout/PageTransition';
+import { useTextSize } from './context/TextSizeContext';
 
 function Layout() {
+  const { textSize } = useTextSize();
+
   return (
     <div className="app-shell">
       <TopNav />
-      <main className="container">
+      <main className="container" data-text-size={textSize}>
         <PageTransition>
           {(location) => (
             <Routes location={location}>

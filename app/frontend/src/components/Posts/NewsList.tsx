@@ -315,30 +315,41 @@ export default function NewsList() {
     });
   }
 
-  function renderPostBody(post: PostItem) {
-    const isExpanded = expandedPostIds.has(post.id);
-    const canCollapse = !isAdmin && shouldCollapsePost(post);
+  function collapsePost(id: string) {
+    setExpandedPostIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
 
-    if (canCollapse && !isExpanded) {
+  function renderPostBody(post: PostItem) {
+    if (isAdmin || !shouldCollapsePost(post)) {
       return (
-        <div className="news-post-collapsed">
-          {post.content.trim() && (
-            <div className="news-content-preview-wrap">
-              <p className="news-content news-content-preview">{renderContent(post.content)}</p>
-            </div>
-          )}
-          <button type="button" className="btn news-open-btn" onClick={() => expandPost(post.id)}>
-            {t('news.open')}
-          </button>
-        </div>
+        <>
+          {post.content.trim() && <p className="news-content">{renderContent(post.content)}</p>}
+          {renderAttachments(post)}
+        </>
       );
     }
 
+    const isExpanded = expandedPostIds.has(post.id);
+
     return (
-      <>
-        {post.content.trim() && <p className="news-content">{renderContent(post.content)}</p>}
-        {renderAttachments(post)}
-      </>
+      <div className={`news-post-collapsible${isExpanded ? ' is-expanded' : ''}`}>
+        <div className="news-post-collapsible-content">
+          {post.content.trim() && <p className="news-content">{renderContent(post.content)}</p>}
+          <div className="news-post-attachments-wrap">{renderAttachments(post)}</div>
+        </div>
+        <button
+          type="button"
+          className="btn news-toggle-btn"
+          aria-expanded={isExpanded}
+          onClick={() => (isExpanded ? collapsePost(post.id) : expandPost(post.id))}
+        >
+          {isExpanded ? t('news.close') : t('news.open')}
+        </button>
+      </div>
     );
   }
 

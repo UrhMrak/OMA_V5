@@ -1332,15 +1332,19 @@ body.modal-open {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.news-post-collapsed {
+.news-post-collapsible {
   margin-top: 6px;
 }
-.news-content-preview-wrap {
+.news-post-collapsible-content {
   position: relative;
   overflow: hidden;
-  max-height: calc(1.5em * 3 + 4px);
+  max-height: calc(1.5em * 4 + 4px);
+  transition: max-height 0.35s ease;
 }
-.news-content-preview-wrap::after {
+.news-post-collapsible.is-expanded .news-post-collapsible-content {
+  max-height: 4000px;
+}
+.news-post-collapsible:not(.is-expanded) .news-post-collapsible-content::after {
   content: '';
   position: absolute;
   left: 0;
@@ -1350,17 +1354,19 @@ body.modal-open {
   background: linear-gradient(to bottom, transparent, var(--card));
   pointer-events: none;
 }
-.news-content-preview {
-  margin-top: 0;
-  padding-top: 4px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+.news-post-collapsible:not(.is-expanded) .news-post-attachments-wrap {
+  visibility: hidden;
+  height: 0;
   overflow: hidden;
 }
-.news-open-btn {
+.news-toggle-btn {
   width: 100%;
   margin-top: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .news-post-collapsible-content {
+    transition: none;
+  }
 }
 .news-content-link {
   color: var(--primary);
@@ -1953,5 +1959,153 @@ body.modal-open {
   .theme-switch,
   .theme-switch-thumb {
     transition: none;
+  }
+}
+
+/* Content text size — scoped to main; navbar/footer unchanged */
+main.container {
+  --text-scale: 1;
+  font-size: calc(1rem * var(--text-scale));
+}
+
+main.container[data-text-size='large'] {
+  --text-scale: 1.125;
+}
+
+main.container[data-text-size='extra-large'] {
+  --text-scale: 1.25;
+}
+
+main.container .h2 {
+  font-size: calc(22px * var(--text-scale));
+}
+
+main.container .h3 {
+  font-size: calc(18px * var(--text-scale));
+}
+
+main.container .small,
+main.container .error {
+  font-size: calc(12px * var(--text-scale));
+}
+
+main.container .label {
+  font-size: calc(12px * var(--text-scale));
+}
+
+main.container .btn {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .dashboard-event-activity {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .calendar-paste-banner {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .calendar-cell .pill {
+  font-size: calc(10px * var(--text-scale));
+}
+
+main.container .calendar-cell .pill .pill-top {
+  font-size: calc(9px * var(--text-scale));
+}
+
+main.container .modal {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .event-heading-activity,
+main.container .event-heading-datetime,
+main.container .date-range-row .date-range-sep {
+  font-size: calc(15px * var(--text-scale));
+}
+
+main.container .date-range-row .input {
+  font-size: calc(15px * var(--text-scale));
+}
+
+main.container .event-readonly-value {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .event-heading-project-id {
+  font-size: calc(12px * var(--text-scale));
+}
+
+main.container .event-musician-details .label,
+main.container .event-musician-details .event-readonly-value {
+  font-size: calc(13px * var(--text-scale));
+}
+
+main.container .library-container {
+  font-size: calc(12px * var(--text-scale));
+}
+
+main.container .library-container .year-title,
+main.container .year-title {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .library-section-title {
+  font-size: calc(16px * var(--text-scale));
+}
+
+main.container .folder-name {
+  font-size: calc(13px * var(--text-scale));
+}
+
+main.container .file-item {
+  font-size: calc(11px * var(--text-scale));
+}
+
+main.container .news-content {
+  font-size: calc(13px * var(--text-scale));
+}
+
+main.container .news-attachment-link {
+  font-size: calc(11px * var(--text-scale));
+}
+
+main.container .stats-table,
+main.container .stats-table thead th,
+main.container .stats-table tbody td,
+main.container .stats-column-toggle {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .calendar-view-toggle button {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .calendar-view-toggle--compact button {
+  font-size: calc(12px * var(--text-scale));
+}
+
+@media (max-width: 520px) {
+  .settings-text-size-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .settings-text-size-toggle button {
+    text-align: center;
+    min-width: 0;
+  }
+
+  .settings-text-size-toggle button + button {
+    border-left: none;
+  }
+
+  .settings-text-size-toggle button:nth-child(odd) {
+    border-right: 1px solid var(--border);
+  }
+
+  .settings-text-size-toggle button:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
   }
 }
