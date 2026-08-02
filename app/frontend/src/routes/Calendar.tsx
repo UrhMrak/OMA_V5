@@ -20,7 +20,7 @@ import {
   defaultNewEventRangeISO,
 } from '../lib/date';
 import { downloadMonthICS, downloadWeekICS } from '../lib/ics';
-import { getWeekKeyFromISO, syncProjectIdsForWeeks } from '../lib/projectId';
+import { getWeekKeyFromISO, getEffectiveProjectId, syncProjectIdsForWeeks } from '../lib/projectId';
 
 type ViewMode = 'month' | 'week';
 type Direction = 'left' | 'right';
@@ -36,7 +36,12 @@ function pad2(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventItem> {
+function buildPastePayload(
+  source: EventItem,
+  targetDay: Date,
+  allEvents: EventItem[]
+): Partial<EventItem> {
+  const effectiveProjectId = getEffectiveProjectId(source, allEvents);
   const wallStart = isoToWallDate(source.dateISO);
   const startMs = Date.parse(source.dateISO);
   const endMs = source.endDateISO ? Date.parse(source.endDateISO) : NaN;
@@ -51,21 +56,20 @@ function buildPastePayload(source: EventItem, targetDay: Date): Partial<EventIte
   const newStartISO = inputValueToISO(inputValue);
   const newEndISO = new Date(Date.parse(newStartISO) + durationMs).toISOString();
 
-  const { id, dateISO, endDateISO, libraryPath: _ignored, projectId, projectIdOverridden: _projectIdOverridden, ...rest } = source;
+  const { id, dateISO, endDateISO, libraryPath: _ignored, projectId: _projectId, projectIdOverridden: _projectIdOverridden, ...rest } = source;
   void id;
   void dateISO;
   void endDateISO;
   void _ignored;
+  void _projectId;
   void _projectIdOverridden;
-
-  const normalizedProjectId = (projectId || '').trim();
 
   return {
     ...rest,
     dateISO: newStartISO,
     endDateISO: newEndISO,
-    ...(normalizedProjectId
-      ? { projectId: normalizedProjectId, projectIdOverridden: true }
+    ...(effectiveProjectId
+      ? { projectId: effectiveProjectId, projectIdOverridden: true }
       : {}),
   };
 }
@@ -119,9 +123,14 @@ export default function CalendarPage() {
   const { role } = useAuth();
 
   const handleCopyEvent = (event: EventItem) => {
-    setCopiedEvent(event);
+    const projectId = getEffectiveProjectId(event, events);
+    const copied: EventItem = {
+      ...event,
+      ...(projectId ? { projectId, projectIdOverridden: true } : {}),
+    };
+    setCopiedEvent(copied);
     try {
-      window.localStorage.setItem(COPIED_EVENT_KEY, JSON.stringify(event));
+      window.localStorage.setItem(COPIED_EVENT_KEY, JSON.stringify(copied));
     } catch {
       // Ignore storage failures; in-memory clipboard still works this session.
     }
@@ -139,14 +148,17 @@ export default function CalendarPage() {
   const pasteOnDay = async (day: Date) => {
     if (!copiedEvent || role !== 'admin') return;
     try {
-      const payload = buildPastePayload(copiedEvent, day);
+      const payload = buildPastePayload(copiedEvent, day, events);
+      const preservedProjectId = payload.projectIdOverridden === true;
       await api.post('/api/events', payload);
-      const weekKey = payload.dateISO ? getWeekKeyFromISO(payload.dateISO) : '';
-      if (weekKey) {
-        const freshEvents = await api.get<EventItem[]>('/api/events');
-        await syncProjectIdsForWeeks(freshEvents, [weekKey]);
+      if (!preservedProjectId) {
+        const weekKey = payload.dateISO ? getWeekKeyFromISO(payload.dateISO) : '';
+        if (weekKey) {
+          const freshEvents = await api.get<EventItem[]>('/api/events');
+          await syncProjectIdsForWeeks(freshEvents, [weekKey]);
+        }
       }
-      loadEvents();
+      await loadEvents();
     } catch (error) {
       console.error('Paste event failed:', error);
       const message =
@@ -255,14 +267,9 @@ export default function CalendarPage() {
   };
 
   const SWIPE_MIN_DISTANCE_PX = 50;
-  const PHONE_MAX_WIDTH_PX = 768;
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = (event: React.TouchEvent) => {
-    if (typeof window === 'undefined' || window.innerWidth > PHONE_MAX_WIDTH_PX) {
-      touchStart.current = null;
-      return;
-    }
     const touch = event.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY };
   };

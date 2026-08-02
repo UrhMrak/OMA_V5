@@ -514,6 +514,7 @@ body {
 }
 .calendar-anim-viewport {
   overflow: hidden;
+  touch-action: pan-y;
 }
 .calendar-anim-exit-left {
   animation: calExitLeft 0.25s ease-out forwards;

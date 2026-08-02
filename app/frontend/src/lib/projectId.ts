@@ -115,6 +115,26 @@ export function computeAutoProjectId(
   return '';
 }
 
+export function getEffectiveProjectId(
+  event: Partial<EventItem> & Pick<EventItem, 'dateISO'>,
+  allEvents: EventItem[],
+  options?: { eventId?: string }
+): string {
+  const manual = (event.projectId || '').trim();
+  if (event.projectIdOverridden) return manual;
+
+  const eventId = options?.eventId ?? ('id' in event ? event.id : undefined);
+  if (eventId && event.dateISO) {
+    const computed = computeAutoProjectId(event, allEvents, {
+      eventId,
+      includeDraft: true,
+    }).trim();
+    if (computed) return computed;
+  }
+
+  return manual;
+}
+
 export function collectWeekKeys(events: Array<Partial<EventItem>>): WeekKey[] {
   return [...new Set(events.map((event) => getWeekKeyFromISO(event.dateISO || '')).filter(Boolean))];
 }

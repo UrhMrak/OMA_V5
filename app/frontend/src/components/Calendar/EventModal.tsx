@@ -649,12 +649,7 @@ export default function EventModal({
               <button
                 className="btn"
                 onClick={() => {
-                  onCopy({
-                    ...event,
-                    ...(displayedProjectId
-                      ? { projectId: displayedProjectId, projectIdOverridden: true }
-                      : {}),
-                  });
+                  onCopy(event);
                   requestClose();
                 }}
               >
