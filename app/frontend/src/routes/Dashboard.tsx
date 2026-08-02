@@ -1,7 +1,7 @@
 import NewsList from '../components/Posts/NewsList';
 import { useEffect, useMemo, useState } from 'react';
 import { EventItem } from '../lib/types';
-import { isSameLocalDay, formatWallTime } from '../lib/date';
+import { isSameLocalDay, formatWallTime, isEventInPulseWindow } from '../lib/date';
 import { useEvents } from '../context/EventsContext';
 import { useLanguage } from '../context/LanguageContext';
 import EventModal from '../components/Calendar/EventModal';
@@ -22,10 +22,16 @@ export default function Dashboard() {
   const { events, loaded, loadEvents } = useEvents();
   const { t } = useLanguage();
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   usePageReady(true);
 
@@ -39,7 +45,11 @@ export default function Dashboard() {
     };
   }, [events]);
 
-  const renderEventList = (items: EventItem[], emptyMessage: string) => {
+  const renderEventList = (
+    items: EventItem[],
+    emptyMessage: string,
+    pulseWhenActive = false
+  ) => {
     if (!loaded) return <SkeletonCardList count={2} />;
     if (items.length === 0) return <p className="muted">{emptyMessage}</p>;
     return (
@@ -60,7 +70,10 @@ export default function Dashboard() {
             }}
           >
             <div className="row" style={{ alignItems: 'center', gap: 6 }}>
-              <div className="event-color" style={{ background: e.color }} />
+              <div
+                className={`event-color${pulseWhenActive && isEventInPulseWindow(e.dateISO, e.endDateISO, now) ? ' event-color--pulse' : ''}`}
+                style={{ background: e.color }}
+              />
               <span className="muted small">{formatEventTimeRange(e.dateISO, e.endDateISO)}</span>
             </div>
             <div>
@@ -86,7 +99,7 @@ export default function Dashboard() {
       </section>
       <section className="dashboard-events">
         <h2 className="h2">{t('dashboard.todayEvents')}</h2>
-        {renderEventList(todayEvents, t('dashboard.noToday'))}
+        {renderEventList(todayEvents, t('dashboard.noToday'), true)}
         <h2 className="h2" style={{ marginTop: 24 }}>{t('dashboard.tomorrowEvents')}</h2>
         {renderEventList(tomorrowEvents, t('dashboard.noTomorrow'))}
       </section>

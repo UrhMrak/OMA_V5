@@ -17,9 +17,10 @@ type AttachmentViewer = {
   loading: boolean;
 };
 
-const MUSICIAN_INITIAL_VISIBLE_COUNT = 3;
-const MUSICIAN_POSTS_PER_LOAD = 1;
+const INITIAL_VISIBLE_COUNT = 3;
+const POSTS_PER_LOAD = 1;
 const NEWS_PREVIEW_LINES = 4;
+const COLLAPSE_TRANSITION_MS = 650;
 
 function shouldCollapsePost(post: PostItem): boolean {
   return Boolean(post.content.trim()) || (post.attachments?.length ?? 0) > 0;
@@ -63,6 +64,8 @@ function MusicianCollapsiblePostBody({
   renderAttachments,
 }: MusicianCollapsiblePostBodyProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const isAnimatingRef = useRef(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [contentMaxHeight, setContentMaxHeight] = useState<number | undefined>(() =>
     getCollapsedContentMaxHeight(Boolean(post.content.trim()))
   );
@@ -74,17 +77,22 @@ function MusicianCollapsiblePostBody({
       setContentMaxHeight(undefined);
       return;
     }
+    if (isAnimatingRef.current) return;
 
-    if (!isExpanded) {
-      setContentMaxHeight(getCollapsedContentMaxHeight(hasContent));
+    if (isExpanded) {
+      setContentMaxHeight(el.scrollHeight);
+      return;
     }
+
+    setContentMaxHeight(getCollapsedContentMaxHeight(hasContent));
   }, [isExpanded, hasContent, post.content, post.attachments]);
 
   useEffect(() => {
     const el = contentRef.current;
-    if (!el || !isExpanded || prefersReducedMotion()) return;
+    if (!el || !isExpanded || prefersReducedMotion() || isAnimatingRef.current) return;
 
     const observer = new ResizeObserver(() => {
+      if (isAnimatingRef.current) return;
       setContentMaxHeight(el.scrollHeight);
     });
     observer.observe(el);
@@ -102,23 +110,82 @@ function MusicianCollapsiblePostBody({
     const collapsedHeight = getCollapsedContentMaxHeight(hasContent);
 
     if (isExpanded) {
-      setContentMaxHeight(el.scrollHeight);
+      isAnimatingRef.current = true;
+      setIsClosing(true);
+      const startHeight = el.scrollHeight;
+      setContentMaxHeight(startHeight);
+      void el.offsetHeight;
+
       requestAnimationFrame(() => {
         setContentMaxHeight(collapsedHeight);
-        onCollapse();
       });
+
+      let finished = false;
+      const finishClose = (event?: Event) => {
+        if (event) {
+          const transitionEvent = event as TransitionEvent;
+          if (transitionEvent.target !== el || transitionEvent.propertyName !== 'max-height') return;
+        }
+        if (finished) return;
+        finished = true;
+        el.removeEventListener('transitionend', finishClose);
+        window.clearTimeout(fallbackTimer);
+        isAnimatingRef.current = false;
+        setIsClosing(false);
+        onCollapse();
+        setContentMaxHeight(collapsedHeight);
+      };
+
+      el.addEventListener('transitionend', finishClose);
+      const fallbackTimer = window.setTimeout(() => finishClose(), COLLAPSE_TRANSITION_MS + 50);
       return;
     }
 
+    isAnimatingRef.current = true;
     onExpand();
+
     requestAnimationFrame(() => {
-      const expandedEl = contentRef.current;
-      if (expandedEl) setContentMaxHeight(expandedEl.scrollHeight);
+      requestAnimationFrame(() => {
+        const expandedEl = contentRef.current;
+        if (!expandedEl) {
+          isAnimatingRef.current = false;
+          return;
+        }
+
+        const targetHeight = expandedEl.scrollHeight;
+        setContentMaxHeight(collapsedHeight);
+        void expandedEl.offsetHeight;
+
+        requestAnimationFrame(() => {
+          setContentMaxHeight(targetHeight);
+        });
+
+        let finished = false;
+        const finishOpen = (event?: Event) => {
+          if (event) {
+            const transitionEvent = event as TransitionEvent;
+            if (transitionEvent.target !== expandedEl || transitionEvent.propertyName !== 'max-height') {
+              return;
+            }
+          }
+          if (finished) return;
+          finished = true;
+          expandedEl.removeEventListener('transitionend', finishOpen);
+          window.clearTimeout(fallbackTimer);
+          isAnimatingRef.current = false;
+          setContentMaxHeight(expandedEl.scrollHeight);
+        };
+
+        expandedEl.addEventListener('transitionend', finishOpen);
+        const fallbackTimer = window.setTimeout(() => finishOpen(), COLLAPSE_TRANSITION_MS + 50);
+      });
     });
   }
 
   return (
-    <div className={`news-post-collapsible${isExpanded ? ' is-expanded' : ''}`}>
+    <div
+      className={`news-post-collapsible${isExpanded ? ' is-expanded' : ''}${isClosing ? ' is-closing' : ''}`}
+    >
       <div
         ref={contentRef}
         className="news-post-collapsible-content"
@@ -148,7 +215,7 @@ export default function NewsList() {
   const editFileInputRef = useRef<HTMLInputElement | null>(null);
   const [viewer, setViewer] = useState<AttachmentViewer | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(MUSICIAN_INITIAL_VISIBLE_COUNT);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
@@ -281,9 +348,8 @@ export default function NewsList() {
   useEffect(() => {
     wasIntersectingRef.current = null;
     autoLoadEnabledRef.current = false;
-    if (isAdmin) return;
-    setVisibleCount(MUSICIAN_INITIAL_VISIBLE_COUNT);
-  }, [posts, isAdmin]);
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  }, [posts]);
 
   useEffect(() => {
     function onScroll() {
@@ -297,13 +363,11 @@ export default function NewsList() {
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => {
       if (prev >= posts.length) return prev;
-      return Math.min(prev + MUSICIAN_POSTS_PER_LOAD, posts.length);
+      return Math.min(prev + POSTS_PER_LOAD, posts.length);
     });
   }, [posts.length]);
 
   useEffect(() => {
-    if (isAdmin) return;
-
     const button = loadMoreRef.current;
     if (!button || visibleCount >= posts.length) return;
 
@@ -331,7 +395,7 @@ export default function NewsList() {
 
     observer.observe(button);
     return () => observer.disconnect();
-  }, [visibleCount, posts.length, loadMore, isAdmin]);
+  }, [visibleCount, posts.length, loadMore]);
 
   async function addPost() {
     if (!title.trim()) return;
@@ -545,7 +609,7 @@ export default function NewsList() {
         <SkeletonCardList count={3} />
       ) : (
       <ul className="card-list">
-        {(isAdmin ? posts : posts.slice(0, visibleCount)).map((p) => (
+        {posts.slice(0, visibleCount).map((p) => (
           <li key={p.id} className="card">
             {editingId === p.id ? (
               <div className="row-gap">
@@ -596,7 +660,7 @@ export default function NewsList() {
         ))}
       </ul>
       )}
-      {loaded && !isAdmin && visibleCount < posts.length && (
+      {loaded && visibleCount < posts.length && (
         <button
           ref={loadMoreRef}
           type="button"

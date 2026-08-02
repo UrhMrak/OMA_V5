@@ -110,6 +110,23 @@ export function isSameLocalDay(iso: string | null | undefined, reference: Date):
   return getLocalDateKeyFromISO(iso) === getLocalDateKey(reference);
 }
 
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+export function isEventInPulseWindow(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  const start = isoToWallDate(startISO);
+  if (Number.isNaN(start.getTime())) return false;
+
+  const end = endISO ? isoToWallDate(endISO) : start;
+  if (Number.isNaN(end.getTime())) return false;
+
+  const nowMs = now.getTime();
+  return nowMs >= start.getTime() - ONE_HOUR_MS && nowMs <= end.getTime();
+}
+
 function getISOWeekContext(date: Date) {
   const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayOfWeek = utcDate.getUTCDay() || 7;
