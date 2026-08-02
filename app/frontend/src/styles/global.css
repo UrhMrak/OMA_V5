@@ -1191,28 +1191,17 @@ body.modal-open {
   flex-direction: column;
   gap: 4px;
 }
-.upload-button-split {
+.upload-button-menu-wrap {
   position: relative;
   display: inline-flex;
   align-items: stretch;
 }
-.upload-button-main {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-.upload-button-menu {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: 0;
-  padding-left: 6px;
-  padding-right: 6px;
-}
-.upload-button-split .btn {
+.upload-button-trigger {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.upload-button-menu .folder-chevron {
+.upload-button-trigger .folder-chevron {
   width: 14px;
   height: 14px;
 }
@@ -1728,6 +1717,16 @@ body.modal-open {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 .library-breadcrumb-wrap {
   display: inline-flex;

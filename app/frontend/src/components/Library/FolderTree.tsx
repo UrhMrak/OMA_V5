@@ -218,7 +218,7 @@ function PlusIcon() {
   );
 }
 
-function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: string; onUploaded: () => void; onSuccess?: () => void }) {
+function UploadButton({ folderPath, onUploaded }: { folderPath: string; onUploaded: () => void }) {
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -229,6 +229,7 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
   const [uploadProcessing, setUploadProcessing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const canUpload = Boolean(folderPath);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -305,8 +306,6 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
         if (percent >= 100) setUploadProcessing(true);
       });
       setSuccess(t('library.uploadSuccess'));
-      if (onSuccess) onSuccess();
-      if (inputRef.current) inputRef.current.value = '';
       setTimeout(() => {
         onUploaded();
         setTimeout(() => setSuccess(''), 2000);
@@ -318,34 +317,37 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
       setBusy(false);
       setUploadProgress(0);
       setUploadProcessing(false);
+      if (inputRef.current) inputRef.current.value = '';
     }
   }
 
   return (
     <div className="upload-button-container">
-      <div className="upload-button-split" ref={menuRef}>
-        <button
-          type="button"
-          onClick={() => startUpload('files')}
-          disabled={busy}
-          className="btn btn-sm upload-button-main"
-        >
-          <UploadIcon />
-          {busy ? t('library.uploading') : t('library.upload')}
-        </button>
+      <div className="upload-button-menu-wrap" ref={menuRef}>
         <button
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
-          disabled={busy}
-          className="btn btn-sm upload-button-menu"
-          aria-label={t('library.uploadFolder')}
+          disabled={busy || !canUpload}
+          className="btn btn-sm upload-button-trigger"
           aria-expanded={menuOpen}
           aria-haspopup="menu"
+          title={!canUpload ? t('library.selectFolderToUpload') : undefined}
         >
+          <UploadIcon />
+          {busy ? t('library.uploading') : t('library.upload')}
           <ChevronIcon expanded={menuOpen} />
         </button>
-        {menuOpen && (
+        {menuOpen && canUpload && (
           <div className="upload-button-dropdown" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              className="upload-button-dropdown-item"
+              onClick={() => startUpload('files')}
+            >
+              <FileIcon />
+              {t('library.upload')}
+            </button>
             <button
               type="button"
               role="menuitem"
@@ -609,15 +611,6 @@ function FolderItem({
               />
             </div>
           ) : null}
-          {isAdmin && (
-            <div className="folder-admin-section" style={{ paddingLeft: contentIndent }}>
-              <UploadButton
-                folderPath={node.path || ''}
-                onUploaded={onRefresh}
-                onSuccess={() => setIsExpanded(true)}
-              />
-            </div>
-          )}
           {subFolders.map((folder) => (
             <FolderItem
               key={folder.path || folder.name}
@@ -1035,40 +1028,45 @@ export default function FolderTree({
               </ul>
             </section>
           )}
-          <nav className="library-breadcrumbs" aria-label={t('library.breadcrumbs')}>
-            <button
-              type="button"
-              className={`library-breadcrumb${breadcrumbSegments.length === 0 ? ' active' : ''}${dropTargetPath === '' && draggedItem ? ' library-drop-target' : ''}`}
-              onClick={() => navigateToFolder('')}
-              onDragOver={(event) => {
-                if (!isAdmin || !draggedItem) return;
-                if (!canMoveLibraryItemToFolder(draggedItem.path, draggedItem.type, '')) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                setDropTargetPath('');
-              }}
-              onDragLeave={() => setDropTargetPath((current) => (current === '' ? null : current))}
-              onDrop={isAdmin ? handleDropOnRoot : undefined}
-            >
-              {t('library.breadcrumbsRoot')}
-            </button>
-            {breadcrumbSegments.map((segment, index) => {
-              const path = segmentsToLibraryPath(breadcrumbSegments.slice(0, index + 1));
-              const isLast = index === breadcrumbSegments.length - 1;
-              return (
-                <span key={path} className="library-breadcrumb-wrap">
-                  <span className="library-breadcrumb-sep" aria-hidden="true">/</span>
-                  <button
-                    type="button"
-                    className={`library-breadcrumb${isLast ? ' active' : ''}`}
-                    onClick={() => navigateToFolder(path)}
-                  >
-                    {segment}
-                  </button>
-                </span>
-              );
-            })}
-          </nav>
+          <div className="library-toolbar">
+            <nav className="library-breadcrumbs" aria-label={t('library.breadcrumbs')}>
+              <button
+                type="button"
+                className={`library-breadcrumb${breadcrumbSegments.length === 0 ? ' active' : ''}${dropTargetPath === '' && draggedItem ? ' library-drop-target' : ''}`}
+                onClick={() => navigateToFolder('')}
+                onDragOver={(event) => {
+                  if (!isAdmin || !draggedItem) return;
+                  if (!canMoveLibraryItemToFolder(draggedItem.path, draggedItem.type, '')) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                  setDropTargetPath('');
+                }}
+                onDragLeave={() => setDropTargetPath((current) => (current === '' ? null : current))}
+                onDrop={isAdmin ? handleDropOnRoot : undefined}
+              >
+                {t('library.breadcrumbsRoot')}
+              </button>
+              {breadcrumbSegments.map((segment, index) => {
+                const path = segmentsToLibraryPath(breadcrumbSegments.slice(0, index + 1));
+                const isLast = index === breadcrumbSegments.length - 1;
+                return (
+                  <span key={path} className="library-breadcrumb-wrap">
+                    <span className="library-breadcrumb-sep" aria-hidden="true">/</span>
+                    <button
+                      type="button"
+                      className={`library-breadcrumb${isLast ? ' active' : ''}`}
+                      onClick={() => navigateToFolder(path)}
+                    >
+                      {segment}
+                    </button>
+                  </span>
+                );
+              })}
+            </nav>
+            {isAdmin ? (
+              <UploadButton folderPath={activeFolderPath} onUploaded={onRefresh} />
+            ) : null}
+          </div>
         </>
       )}
       {!searchQuery.trim() && (
