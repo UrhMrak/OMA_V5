@@ -119,25 +119,44 @@ export function searchLibrary(node: LibraryNode, query: string): LibrarySearchRe
   });
 }
 
-function canonicalRecentPath(path: string): string {
-  return segmentsToLibraryPath(splitLibraryPath(path));
+const ENCODED_SLASH_TOKEN = '\uE000';
+
+function decodeSegmentForRecentIdentity(segment: string): string {
+  const protectedSegment = segment.replace(/%2F/gi, ENCODED_SLASH_TOKEN);
+  let decoded = protectedSegment.replace(/%25/g, '%');
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch {
+    // Keep partially decoded segment when URI decoding fails.
+  }
+  return decoded.replace(new RegExp(ENCODED_SLASH_TOKEN, 'g'), '/');
+}
+
+function recentFileIdentityKey(path: string): string {
+  return splitLibraryPath(path)
+    .map((segment) => decodeSegmentForRecentIdentity(segment).toLowerCase())
+    .join('/');
 }
 
 function dedupeRecentFiles(items: RecentLibraryFile[]): RecentLibraryFile[] {
-  const byPath = new Map<string, RecentLibraryFile>();
+  const byIdentity = new Map<string, RecentLibraryFile>();
 
   for (const item of items) {
     if (!item.path) continue;
-    const key = canonicalRecentPath(item.path);
-    const existing = byPath.get(key);
+    const key = recentFileIdentityKey(item.path);
+    const existing = byIdentity.get(key);
     if (!existing || item.openedAt > existing.openedAt) {
-      byPath.set(key, { path: key, name: item.name, openedAt: item.openedAt });
+      byIdentity.set(key, item);
     }
   }
 
-  return [...byPath.values()]
+  return [...byIdentity.values()]
     .sort((a, b) => b.openedAt - a.openedAt)
     .slice(0, MAX_RECENT);
+}
+
+export function getRecentLibraryFileKey(path: string): string {
+  return recentFileIdentityKey(path);
 }
 
 export function getRecentLibraryFiles(): RecentLibraryFile[] {
@@ -146,7 +165,12 @@ export function getRecentLibraryFiles(): RecentLibraryFile[] {
     const raw = window.localStorage.getItem(RECENT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as RecentLibraryFile[];
-    return dedupeRecentFiles(Array.isArray(parsed) ? parsed : []);
+    const deduped = dedupeRecentFiles(Array.isArray(parsed) ? parsed : []);
+    const serialized = JSON.stringify(deduped);
+    if (serialized !== raw) {
+      window.localStorage.setItem(RECENT_KEY, serialized);
+    }
+    return deduped;
   } catch {
     return [];
   }
@@ -155,14 +179,14 @@ export function getRecentLibraryFiles(): RecentLibraryFile[] {
 export function addRecentLibraryFile(file: LibraryNode): void {
   if (typeof window === 'undefined' || !file.path) return;
   try {
-    const path = canonicalRecentPath(file.path);
+    const identityKey = recentFileIdentityKey(file.path);
     const existing = getRecentLibraryFiles().filter(
-      (item) => canonicalRecentPath(item.path) !== path
+      (item) => recentFileIdentityKey(item.path) !== identityKey
     );
-    const next: RecentLibraryFile[] = [
-      { path, name: file.name, openedAt: Date.now() },
+    const next = dedupeRecentFiles([
+      { path: file.path, name: file.name, openedAt: Date.now() },
       ...existing,
-    ].slice(0, MAX_RECENT);
+    ]);
     window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch {
     // Ignore storage failures.

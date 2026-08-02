@@ -9,6 +9,7 @@ import {
   addRecentLibraryFile,
   canMoveLibraryItemToFolder,
   formatLibraryPathForDisplay,
+  getRecentLibraryFileKey,
   getRecentLibraryFiles,
   LIBRARY_DRAG_MIME,
   pathToSegments,
@@ -219,17 +220,34 @@ function PlusIcon() {
 
 function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: string; onUploaded: () => void; onSuccess?: () => void }) {
   const { t } = useLanguage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const uploadModeRef = useRef<'files' | 'folder'>('files');
   const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadProcessing, setUploadProcessing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [menuOpen]);
+
   function getUploadRelativePath(file: File): string {
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
     return relativePath?.replace(/\\/g, '/') || file.name;
+  }
+
+  function shouldPreserveStructure(files: File[]): boolean {
+    return files.some((file) => getUploadRelativePath(file).includes('/'));
   }
 
   function shouldIncludeFile(file: File, preserveStructure: boolean): boolean {
@@ -239,8 +257,31 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
     return name !== '.DS_Store' && name !== 'Thumbs.db';
   }
 
-  async function handleUpload(files: FileList | null, preserveStructure: boolean) {
+  function configureInput(mode: 'files' | 'folder') {
+    const input = inputRef.current;
+    if (!input) return;
+    uploadModeRef.current = mode;
+    if (mode === 'folder') {
+      input.setAttribute('webkitdirectory', '');
+      input.setAttribute('directory', '');
+      input.removeAttribute('accept');
+    } else {
+      input.removeAttribute('webkitdirectory');
+      input.removeAttribute('directory');
+      input.setAttribute('accept', UPLOAD_ACCEPT);
+    }
+    input.value = '';
+  }
+
+  function startUpload(mode: 'files' | 'folder') {
+    setMenuOpen(false);
+    configureInput(mode);
+    inputRef.current?.click();
+  }
+
+  async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
+    const preserveStructure = uploadModeRef.current === 'folder' || shouldPreserveStructure(Array.from(files));
     const selected = Array.from(files).filter((file) => shouldIncludeFile(file, preserveStructure));
     if (selected.length === 0) return;
 
@@ -265,8 +306,7 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
       });
       setSuccess(t('library.uploadSuccess'));
       if (onSuccess) onSuccess();
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (folderInputRef.current) folderInputRef.current.value = '';
+      if (inputRef.current) inputRef.current.value = '';
       setTimeout(() => {
         onUploaded();
         setTimeout(() => setSuccess(''), 2000);
@@ -283,41 +323,48 @@ function UploadButton({ folderPath, onUploaded, onSuccess }: { folderPath: strin
 
   return (
     <div className="upload-button-container">
-      <div className="upload-button-row">
+      <div className="upload-button-split" ref={menuRef}>
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => startUpload('files')}
           disabled={busy}
-          className="btn btn-sm"
+          className="btn btn-sm upload-button-main"
         >
           <UploadIcon />
           {busy ? t('library.uploading') : t('library.upload')}
         </button>
         <button
           type="button"
-          onClick={() => folderInputRef.current?.click()}
+          onClick={() => setMenuOpen((open) => !open)}
           disabled={busy}
-          className="btn btn-sm"
+          className="btn btn-sm upload-button-menu"
+          aria-label={t('library.uploadFolder')}
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
         >
-          <FolderIcon />
-          {busy ? t('library.uploading') : t('library.uploadFolder')}
+          <FolderChevron expanded={menuOpen} />
         </button>
+        {menuOpen && (
+          <div className="upload-button-dropdown" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              className="upload-button-dropdown-item"
+              onClick={() => startUpload('folder')}
+            >
+              <FolderIcon />
+              {t('library.uploadFolder')}
+            </button>
+          </div>
+        )}
       </div>
       <input
-        ref={fileInputRef}
+        ref={inputRef}
         type="file"
         multiple
         accept={UPLOAD_ACCEPT}
         style={{ display: 'none' }}
-        onChange={(e) => handleUpload(e.target.files, false)}
-      />
-      <input
-        ref={folderInputRef}
-        type="file"
-        multiple
-        style={{ display: 'none' }}
-        onChange={(e) => handleUpload(e.target.files, true)}
-        {...({ webkitdirectory: 'true', directory: 'true' } as React.InputHTMLAttributes<HTMLInputElement>)}
+        onChange={(e) => handleUpload(e.target.files)}
       />
       {busy && (
         <div className="upload-progress">
@@ -968,7 +1015,7 @@ export default function FolderTree({
               <h3 className="h3 library-section-title">{t('library.recentFiles')}</h3>
               <ul className="library-recent-list">
                 {recentFiles.map((recent) => (
-                  <li key={recent.path}>
+                  <li key={getRecentLibraryFileKey(recent.path)}>
                     <button
                       type="button"
                       className="library-recent-item"

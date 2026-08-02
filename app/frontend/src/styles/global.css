@@ -1191,15 +1191,59 @@ body.modal-open {
   flex-direction: column;
   gap: 4px;
 }
-.upload-button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.upload-button-split {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
 }
-.upload-button-row .btn {
+.upload-button-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.upload-button-menu {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 0;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.upload-button-split .btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+.upload-button-menu .folder-chevron {
+  width: 14px;
+  height: 14px;
+}
+.upload-button-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 100%;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+.upload-button-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.upload-button-dropdown-item:hover {
+  background: #f3f4f6;
 }
 .upload-progress {
   display: flex;
