@@ -19,15 +19,9 @@ type AttachmentViewer = {
 
 const INITIAL_VISIBLE_COUNT = 1;
 const POSTS_PER_LOAD = 1;
-const COLLAPSED_PREVIEW_LINES = 3;
-const COLLAPSED_CHAR_THRESHOLD = 180;
 
 function shouldCollapsePost(post: PostItem): boolean {
-  const content = post.content.trim();
-  if (!content && !(post.attachments?.length ?? 0)) return false;
-  const lineCount = content.split('\n').length;
-  const hasAttachments = (post.attachments?.length ?? 0) > 0;
-  return lineCount > COLLAPSED_PREVIEW_LINES || content.length > COLLAPSED_CHAR_THRESHOLD || hasAttachments;
+  return Boolean(post.content.trim()) || (post.attachments?.length ?? 0) > 0;
 }
 
 export default function NewsList() {

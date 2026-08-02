@@ -1333,16 +1333,32 @@ body.modal-open {
   overflow-wrap: anywhere;
 }
 .news-post-collapsible {
+  --news-preview-lines: 4;
   margin-top: 6px;
 }
 .news-post-collapsible-content {
   position: relative;
   overflow: hidden;
-  max-height: calc(1.5em * 4 + 4px);
-  transition: max-height 0.35s ease;
+  max-height: calc(
+    (13px * var(--text-scale, 1) * 1.5 * var(--news-preview-lines)) + 10px
+  );
+  transition: max-height 0.55s ease;
 }
 .news-post-collapsible.is-expanded .news-post-collapsible-content {
   max-height: 4000px;
+}
+.news-post-collapsible:not(.is-expanded) .news-content {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--news-preview-lines);
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+.news-post-collapsible.is-expanded .news-content {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 .news-post-collapsible:not(.is-expanded) .news-post-collapsible-content::after {
   content: '';
@@ -1350,8 +1366,13 @@ body.modal-open {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 2.25em;
-  background: linear-gradient(to bottom, transparent, var(--card));
+  height: 3.75em;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--card) 35%, transparent) 45%,
+    var(--card) 100%
+  );
   pointer-events: none;
 }
 .news-post-collapsible:not(.is-expanded) .news-post-attachments-wrap {
