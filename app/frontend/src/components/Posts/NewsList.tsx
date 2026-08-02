@@ -19,6 +19,16 @@ type AttachmentViewer = {
 
 const INITIAL_VISIBLE_COUNT = 1;
 const POSTS_PER_LOAD = 1;
+const COLLAPSED_PREVIEW_LINES = 3;
+const COLLAPSED_CHAR_THRESHOLD = 180;
+
+function shouldCollapsePost(post: PostItem): boolean {
+  const content = post.content.trim();
+  if (!content && !(post.attachments?.length ?? 0)) return false;
+  const lineCount = content.split('\n').length;
+  const hasAttachments = (post.attachments?.length ?? 0) > 0;
+  return lineCount > COLLAPSED_PREVIEW_LINES || content.length > COLLAPSED_CHAR_THRESHOLD || hasAttachments;
+}
 
 export default function NewsList() {
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -35,6 +45,7 @@ export default function NewsList() {
   const [editContent, setEditContent] = useState('');
   const [editFiles, setEditFiles] = useState<File[]>([]);
   const [editRemovedAttachmentIds, setEditRemovedAttachmentIds] = useState<string[]>([]);
+  const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(() => new Set());
   const objectUrlRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const wasIntersectingRef = useRef<boolean | null>(null);
@@ -296,6 +307,41 @@ export default function NewsList() {
     );
   }
 
+  function expandPost(id: string) {
+    setExpandedPostIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
+
+  function renderPostBody(post: PostItem) {
+    const isExpanded = expandedPostIds.has(post.id);
+    const canCollapse = !isAdmin && shouldCollapsePost(post);
+
+    if (canCollapse && !isExpanded) {
+      return (
+        <div className="news-post-collapsed">
+          {post.content.trim() && (
+            <div className="news-content-preview-wrap">
+              <p className="news-content news-content-preview">{renderContent(post.content)}</p>
+            </div>
+          )}
+          <button type="button" className="btn news-open-btn" onClick={() => expandPost(post.id)}>
+            {t('news.open')}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {post.content.trim() && <p className="news-content">{renderContent(post.content)}</p>}
+        {renderAttachments(post)}
+      </>
+    );
+  }
+
   function renderEditAttachments(post: PostItem) {
     const visibleAttachments = (post.attachments || []).filter(
       (attachment) => !editRemovedAttachmentIds.includes(attachment.id)
@@ -424,8 +470,7 @@ export default function NewsList() {
                     </div>
                   )}
                 </div>
-                <p className="news-content">{renderContent(p.content)}</p>
-                {renderAttachments(p)}
+                {renderPostBody(p)}
               </>
             )}
           </li>

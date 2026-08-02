@@ -1078,12 +1078,12 @@ body.modal-open {
   padding: 4px 8px 4px 0;
   cursor: pointer;
   border-radius: 4px;
-  border: 0.7px solid transparent;
+  border: 1px solid transparent;
   user-select: none;
   transition: background 0.15s, border-color 0.15s;
 }
 .folder-row:hover {
-  background: var(--surface-hover);
+  background: var(--surface);
   border-color: var(--border);
 }
 .folder-row svg:not(.folder-chevron) {
@@ -1332,6 +1332,36 @@ body.modal-open {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.news-post-collapsed {
+  margin-top: 6px;
+}
+.news-content-preview-wrap {
+  position: relative;
+  overflow: hidden;
+  max-height: calc(1.5em * 3 + 4px);
+}
+.news-content-preview-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.25em;
+  background: linear-gradient(to bottom, transparent, var(--card));
+  pointer-events: none;
+}
+.news-content-preview {
+  margin-top: 0;
+  padding-top: 4px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.news-open-btn {
+  width: 100%;
+  margin-top: 8px;
+}
 .news-content-link {
   color: var(--primary);
   text-decoration: underline;
@@ -1561,23 +1591,20 @@ body.modal-open {
   color: var(--muted);
 }
 .library-breadcrumb {
-  border: 0.7px solid transparent;
+  border: none;
   background: transparent;
   padding: 2px 4px;
   font: inherit;
   color: var(--primary);
   cursor: pointer;
   border-radius: 4px;
-  transition: background 0.15s, border-color 0.15s;
 }
 .library-breadcrumb:hover:not(.active) {
   background: var(--surface-hover);
-  border-color: var(--border);
 }
 .library-breadcrumb.active {
   text-decoration: underline;
   text-underline-offset: 2px;
-  border-color: var(--border);
 }
 .library-search-results {
   display: flex;
@@ -1620,7 +1647,7 @@ body.modal-open {
   width: 100%;
 }
 .folder-row-active {
-  background: var(--accent-soft);
+  background: var(--surface);
   border-color: var(--border);
 }
 .folder-row-drop-target,

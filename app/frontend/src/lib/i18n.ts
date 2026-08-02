@@ -183,6 +183,7 @@ export const en = {
     downloadFileFailed: 'Failed to download file.',
     loadPdfFailed: 'Failed to load PDF.',
     loadMore: 'Load more',
+    open: 'Open',
   },
   pdf: {
     download: 'Download',
@@ -475,6 +476,7 @@ export const is: Translations = {
     downloadFileFailed: 'Mist\u00F3kst a\u00F0 s\u00E6kja skr\u00E1.',
     loadPdfFailed: 'Mist\u00F3kst a\u00F0 hla\u00F0a PDF.',
     loadMore: 'S\u00FDna meira',
+    open: 'Opna',
   },
   pdf: {
     download: 'S\u00E6kja',
