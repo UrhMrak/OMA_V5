@@ -224,7 +224,6 @@ export default function NewsList() {
   const [editRemovedAttachmentIds, setEditRemovedAttachmentIds] = useState<string[]>([]);
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(() => new Set());
   const objectUrlRef = useRef<string | null>(null);
-  const postCardRefs = useRef<Record<string, HTMLLIElement | null>>({});
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const wasIntersectingRef = useRef<boolean | null>(null);
   const autoLoadEnabledRef = useRef(false);
@@ -493,23 +492,12 @@ export default function NewsList() {
     });
   }
 
-  function scrollPostIntoView(id: string) {
-    const postCard = postCardRefs.current[id];
-    if (!postCard) return;
-
-    postCard.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'start',
-    });
-  }
-
   function collapsePost(id: string) {
     setExpandedPostIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
     });
-    requestAnimationFrame(() => scrollPostIntoView(id));
   }
 
   function renderPostBody(post: PostItem) {
@@ -623,13 +611,7 @@ export default function NewsList() {
       ) : (
       <ul className="card-list">
         {posts.slice(0, visibleCount).map((p) => (
-          <li
-            key={p.id}
-            className="card news-post-card"
-            ref={(el) => {
-              postCardRefs.current[p.id] = el;
-            }}
-          >
+          <li key={p.id} className="card">
             {editingId === p.id ? (
               <div className="row-gap">
                 <div className="news-admin-actions">

@@ -100,7 +100,7 @@ export default function Dashboard() {
       <section className="dashboard-events">
         <h2 className="h2 dashboard-section-title">{t('dashboard.todayEvents')}</h2>
         {renderEventList(todayEvents, t('dashboard.noToday'), true)}
-        <h2 className="h2 dashboard-section-title" style={{ marginTop: 24 }}>{t('dashboard.tomorrowEvents')}</h2>
+        <h2 className="h2 dashboard-section-title dashboard-events-next-title">{t('dashboard.tomorrowEvents')}</h2>
         {renderEventList(tomorrowEvents, t('dashboard.noTomorrow'))}
       </section>
       {selectedEvent && (

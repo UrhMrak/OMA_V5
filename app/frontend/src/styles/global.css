@@ -391,6 +391,13 @@ body {
   .dashboard-grid .dashboard-events {
     order: -1;
   }
+  .dashboard-grid .dashboard-news {
+    padding-top: 10px;
+  }
+}
+.dashboard-grid .card-list > .card,
+.dashboard-grid .skeleton-card {
+  background: var(--surface);
 }
 .card {
   background: var(--card);
@@ -417,6 +424,14 @@ body {
 }
 .dashboard-event-venue {
   margin-top: 2px;
+}
+.dashboard-events-next-title {
+  margin-top: 24px;
+}
+@media (max-width: 900px) {
+  .dashboard-events-next-title {
+    margin-top: 12px;
+  }
 }
 .event-color {
   width: 10px;
@@ -1335,9 +1350,6 @@ body.modal-open {
     min-width: 0;
   }
 }
-.news-post-card {
-  scroll-margin-top: 56px;
-}
 .news-content {
   font-size: 13px;
   line-height: 1.5;
@@ -1382,14 +1394,7 @@ body.modal-open {
   right: 0;
   bottom: 0;
   height: var(--news-fade-height);
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--card) 20%, transparent) 28%,
-    color-mix(in srgb, var(--card) 52%, transparent) 56%,
-    color-mix(in srgb, var(--card) 82%, transparent) 82%,
-    var(--card) 100%
-  );
+  background: linear-gradient(to bottom, transparent 35%, var(--surface) 100%);
   opacity: 1;
   pointer-events: none;
   transition: opacity 0.65s cubic-bezier(0.33, 1, 0.68, 1);
@@ -1416,7 +1421,6 @@ body.modal-open {
   padding: 8px 18px;
   position: relative;
   z-index: 2;
-  background: var(--surface);
 }
 .news-post-collapsible:not(.is-expanded) .news-toggle-btn,
 .news-post-collapsible.is-expanded.is-closing .news-toggle-btn {
