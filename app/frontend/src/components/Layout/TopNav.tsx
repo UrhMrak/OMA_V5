@@ -38,7 +38,7 @@ export default function TopNav() {
           alt=""
           aria-hidden="true"
         />
-        <span>Orchestra Manager</span>
+        <span>ISO Orchestra Manager</span>
       </Link>
 
       <button

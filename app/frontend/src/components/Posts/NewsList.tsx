@@ -225,8 +225,7 @@ export default function NewsList() {
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(() => new Set());
   const objectUrlRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
-  const wasIntersectingRef = useRef<boolean | null>(null);
-  const autoLoadEnabledRef = useRef(false);
+  const loadMoreInViewRef = useRef(false);
   const { role, username } = useAuth();
   const isAdmin = role === 'admin' || username === 'admin';
   const { t } = useLanguage();
@@ -347,19 +346,9 @@ export default function NewsList() {
   useEffect(() => { refresh(); }, []);
 
   useEffect(() => {
-    wasIntersectingRef.current = null;
-    autoLoadEnabledRef.current = false;
+    loadMoreInViewRef.current = false;
     setVisibleCount(INITIAL_VISIBLE_COUNT);
   }, [posts]);
-
-  useEffect(() => {
-    function onScroll() {
-      autoLoadEnabledRef.current = true;
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   const loadMore = useCallback(() => {
     setVisibleCount((prev) => {
@@ -372,30 +361,19 @@ export default function NewsList() {
     const button = loadMoreRef.current;
     if (!button || visibleCount >= posts.length) return;
 
-    wasIntersectingRef.current = null;
+    function onScroll() {
+      const rect = button.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight && rect.bottom > 0;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
+      if (inView && !loadMoreInViewRef.current) {
+        loadMore();
+      }
 
-        const isIntersecting = entry.isIntersecting;
-        if (wasIntersectingRef.current === null) {
-          wasIntersectingRef.current = isIntersecting;
-          return;
-        }
+      loadMoreInViewRef.current = inView;
+    }
 
-        if (isIntersecting && !wasIntersectingRef.current && autoLoadEnabledRef.current) {
-          loadMore();
-        }
-
-        wasIntersectingRef.current = isIntersecting;
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(button);
-    return () => observer.disconnect();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [visibleCount, posts.length, loadMore]);
 
   async function addPost() {
