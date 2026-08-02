@@ -1111,7 +1111,7 @@ body.modal-open {
   transition: background 0.15s, border-color 0.15s;
 }
 .folder-row:hover {
-  background: var(--surface);
+  background: var(--surface-hover);
   border-color: var(--border);
 }
 .folder-row svg:not(.folder-chevron) {
@@ -1792,7 +1792,8 @@ body.modal-open {
 .library-search-folder-label {
   width: 100%;
 }
-.folder-row-active {
+.folder-row-active,
+.folder-row-active:hover {
   background: var(--surface);
   border-color: var(--border);
 }
