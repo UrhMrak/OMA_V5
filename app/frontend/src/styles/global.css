@@ -1776,7 +1776,8 @@ body.modal-open {
   flex-shrink: 0;
 }
 .stats-table-wrap {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: min(560px, calc(100vh - 280px));
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
