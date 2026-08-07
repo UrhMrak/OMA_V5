@@ -115,6 +115,7 @@ async function request<T>(method: Method, url: string, body?: any, headers?: Rec
 export type UploadProgressHandler = (percent: number) => void;
 
 function uploadWithProgressRequest<T>(
+  method: 'POST' | 'PUT',
   url: string,
   form: FormData,
   onProgress?: UploadProgressHandler
@@ -123,7 +124,7 @@ function uploadWithProgressRequest<T>(
     const xhr = new XMLHttpRequest();
     const resolvedUrl = resolveUrl(url);
 
-    xhr.open('POST', resolvedUrl);
+    xhr.open(method, resolvedUrl);
     const token = getToken();
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
@@ -164,6 +165,8 @@ export const api = {
   delete: <T = any>(url: string) => request<T>('DELETE', url),
   upload: <T = any>(url: string, form: FormData) => request<T>('POST', url, form),
   uploadWithProgress: <T = any>(url: string, form: FormData, onProgress?: UploadProgressHandler) =>
-    uploadWithProgressRequest<T>(url, form, onProgress),
+    uploadWithProgressRequest<T>('POST', url, form, onProgress),
   uploadPut: <T = any>(url: string, form: FormData) => request<T>('PUT', url, form),
+  uploadPutWithProgress: <T = any>(url: string, form: FormData, onProgress?: UploadProgressHandler) =>
+    uploadWithProgressRequest<T>('PUT', url, form, onProgress),
 };

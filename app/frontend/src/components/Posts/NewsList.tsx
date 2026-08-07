@@ -207,6 +207,30 @@ function MusicianCollapsiblePostBody({
   );
 }
 
+function SaveProgressBar({
+  visible,
+  progress,
+  processing,
+  processingLabel,
+}: {
+  visible: boolean;
+  progress: number;
+  processing: boolean;
+  processingLabel: string;
+}) {
+  if (!visible) return null;
+  return (
+    <div className="upload-progress">
+      <div className="upload-progress-bar" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+        <div className="upload-progress-fill" style={{ width: `${progress}%` }} />
+      </div>
+      <span className="upload-progress-label">
+        {processing ? processingLabel : `${progress}%`}
+      </span>
+    </div>
+  );
+}
+
 export default function NewsList() {
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [title, setTitle] = useState('');
@@ -222,6 +246,9 @@ export default function NewsList() {
   const [editContent, setEditContent] = useState('');
   const [editFiles, setEditFiles] = useState<File[]>([]);
   const [editRemovedAttachmentIds, setEditRemovedAttachmentIds] = useState<string[]>([]);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveProgress, setSaveProgress] = useState(0);
+  const [saveProcessing, setSaveProcessing] = useState(false);
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(() => new Set());
   const objectUrlRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
@@ -376,14 +403,36 @@ export default function NewsList() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [visibleCount, posts.length, loadMore]);
 
+  function trackSaveProgress(percent: number) {
+    setSaveProgress(percent);
+    if (percent >= 100) setSaveProcessing(true);
+  }
+
+  async function uploadPostForm(url: string, form: FormData, method: 'POST' | 'PUT') {
+    setSaveBusy(true);
+    setSaveProgress(0);
+    setSaveProcessing(false);
+    try {
+      if (method === 'POST') {
+        await api.uploadWithProgress(url, form, trackSaveProgress);
+      } else {
+        await api.uploadPutWithProgress(url, form, trackSaveProgress);
+      }
+    } finally {
+      setSaveBusy(false);
+      setSaveProgress(0);
+      setSaveProcessing(false);
+    }
+  }
+
   async function addPost() {
-    if (!title.trim()) return;
+    if (!title.trim() || saveBusy) return;
     const form = new FormData();
     form.append('title', title.trim());
     form.append('content', content.trim());
     files.forEach((file) => form.append('attachments', file, file.name));
 
-    await api.upload('/api/posts', form);
+    await uploadPostForm('/api/posts', form, 'POST');
     setTitle('');
     setContent('');
     setFiles([]);
@@ -424,7 +473,7 @@ export default function NewsList() {
   }
 
   async function saveEdit() {
-    if (!editingId || !editTitle.trim()) return;
+    if (!editingId || !editTitle.trim() || saveBusy) return;
     const form = new FormData();
     form.append('title', editTitle.trim());
     form.append('content', editContent.trim());
@@ -433,7 +482,7 @@ export default function NewsList() {
     }
     editFiles.forEach((file) => form.append('attachments', file, file.name));
 
-    await api.uploadPut(`/api/posts/${editingId}`, form);
+    await uploadPostForm(`/api/posts/${editingId}`, form, 'PUT');
     cancelEdit();
     refresh();
   }
@@ -580,7 +629,15 @@ export default function NewsList() {
                 ))}
               </ul>
             )}
-            <button className="btn primary" onClick={addPost}>{t('news.post')}</button>
+            <SaveProgressBar
+              visible={saveBusy && editingId === null}
+              progress={saveProgress}
+              processing={saveProcessing}
+              processingLabel={t('library.uploadProcessing')}
+            />
+            <button className="btn primary" onClick={addPost} disabled={saveBusy}>
+              {t('news.post')}
+            </button>
           </div>
         </div>
       )}
@@ -593,13 +650,19 @@ export default function NewsList() {
             {editingId === p.id ? (
               <div className="row-gap">
                 <div className="news-admin-actions">
-                  <button className="btn primary" type="button" onClick={saveEdit}>
+                  <button className="btn primary" type="button" onClick={saveEdit} disabled={saveBusy}>
                     {t('news.save')}
                   </button>
-                  <button className="btn" type="button" onClick={cancelEdit}>
+                  <button className="btn" type="button" onClick={cancelEdit} disabled={saveBusy}>
                     {t('news.cancel')}
                   </button>
                 </div>
+                <SaveProgressBar
+                  visible={saveBusy && editingId === p.id}
+                  progress={saveProgress}
+                  processing={saveProcessing}
+                  processingLabel={t('library.uploadProcessing')}
+                />
                 <AutoResizeTextarea
                   className="textarea"
                   placeholder={t('news.titlePlaceholder')}
