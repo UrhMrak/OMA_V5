@@ -42,6 +42,8 @@ function PdfDocumentView({ objectUrl }: { objectUrl: string }) {
         }
 
         const containerWidth = container.clientWidth || 800;
+        // Render at device pixel ratio so pages stay sharp on HiDPI / mobile screens
+        const outputScale = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           if (cancelled) {
@@ -59,8 +61,10 @@ function PdfDocumentView({ objectUrl }: { objectUrl: string }) {
 
           const canvas = document.createElement('canvas');
           canvas.className = 'pdf-page-canvas';
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+          canvas.width = Math.floor(viewport.width * outputScale);
+          canvas.height = Math.floor(viewport.height * outputScale);
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
           canvas.setAttribute('role', 'img');
           canvas.setAttribute('aria-label', `Page ${pageNum}`);
 
@@ -70,7 +74,14 @@ function PdfDocumentView({ objectUrl }: { objectUrl: string }) {
           const context = canvas.getContext('2d');
           if (!context) continue;
 
-          await page.render({ canvasContext: context, viewport }).promise;
+          const transform =
+            outputScale !== 1 ? ([outputScale, 0, 0, outputScale, 0, 0] as const) : undefined;
+
+          await page.render({
+            canvasContext: context,
+            viewport,
+            ...(transform ? { transform } : {}),
+          }).promise;
         }
 
         if (!cancelled) setRendering(false);
