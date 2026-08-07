@@ -249,6 +249,7 @@ export default function NewsList() {
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveProgress, setSaveProgress] = useState(0);
   const [saveProcessing, setSaveProcessing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(() => new Set());
   const objectUrlRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
@@ -441,9 +442,14 @@ export default function NewsList() {
   }
 
   async function remove(id: string) {
-    await api.delete(`/api/posts/${id}`);
-    if (editingId === id) cancelEdit();
-    refresh();
+    setDeletingId(id);
+    try {
+      await api.delete(`/api/posts/${id}`);
+      if (editingId === id) cancelEdit();
+      await refresh();
+    } catch {
+      setDeletingId(null);
+    }
   }
 
   function startEdit(post: PostItem) {
@@ -686,11 +692,16 @@ export default function NewsList() {
                   </div>
                   {isAdmin && (
                     <div className="news-admin-actions">
-                      <button className="btn" type="button" onClick={() => startEdit(p)}>
+                      <button className="btn" type="button" onClick={() => startEdit(p)} disabled={deletingId === p.id}>
                         {t('news.edit')}
                       </button>
-                      <button className="btn danger" type="button" onClick={() => remove(p.id)}>
-                        {t('news.delete')}
+                      <button
+                        className="btn danger"
+                        type="button"
+                        onClick={() => remove(p.id)}
+                        disabled={deletingId === p.id}
+                      >
+                        {deletingId === p.id ? t('news.deleting') : t('news.delete')}
                       </button>
                     </div>
                   )}

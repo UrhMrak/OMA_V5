@@ -170,6 +170,7 @@ export const en = {
     deleteConfirm: 'Delete "{title}"? This cannot be undone.',
     thisEvent: 'this event',
     deleteFailed: 'Failed to delete event. Please try again.',
+    deleting: 'Deleting\u2026',
   },
   news: {
     titlePlaceholder: 'Title',
@@ -177,6 +178,7 @@ export const en = {
     post: 'Post',
     attachments: 'Attachments',
     delete: 'Delete',
+    deleting: 'Deleting\u2026',
     edit: 'Edit',
     save: 'Save',
     cancel: 'Cancel',
@@ -471,6 +473,7 @@ export const is: Translations = {
     deleteConfirm: 'Ey\u00F0a \u201E{title}\u201C? \u00DEetta er ekki h\u00E6gt a\u00F0 afturkalla.',
     thisEvent: '\u00FEennan vi\u00F0bur\u00F0',
     deleteFailed: 'Mist\u00F3kst a\u00F0 ey\u00F0a vi\u00F0bur\u00F0i. Reyndu aftur.',
+    deleting: 'Ey\u00F0i\u2026',
   },
   news: {
     titlePlaceholder: 'Titill',
@@ -478,6 +481,7 @@ export const is: Translations = {
     post: 'Birta',
     attachments: 'Vi\u00F0hengi',
     delete: 'Ey\u00F0a',
+    deleting: 'Ey\u00F0i\u2026',
     edit: 'Breyta',
     save: 'Vista',
     cancel: 'H\u00E6tta vi\u00F0',

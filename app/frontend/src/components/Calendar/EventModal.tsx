@@ -256,7 +256,6 @@ export default function EventModal({
       console.error('Delete event failed:', error);
       const message = error instanceof Error && error.message ? error.message : t('event.deleteFailed');
       alert(message);
-    } finally {
       setIsDeleting(false);
     }
   }
@@ -628,13 +627,13 @@ export default function EventModal({
           {role === 'admin' && !isCreating ? (
             <button
               type="button"
-              className="icon-button delete-button"
+              className={`${isDeleting ? 'btn btn-sm danger' : 'icon-button delete-button'}`}
               onClick={handleDelete}
               disabled={isDeleting}
-              aria-label={t('event.deleteEvent')}
-              title={t('event.deleteEvent')}
+              aria-label={isDeleting ? t('event.deleting') : t('event.deleteEvent')}
+              title={isDeleting ? t('event.deleting') : t('event.deleteEvent')}
             >
-              <DeleteIcon size={16} />
+              {isDeleting ? t('event.deleting') : <DeleteIcon size={16} />}
             </button>
           ) : (
             <div />
