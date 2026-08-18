@@ -39,9 +39,15 @@ export default function Dashboard() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const sortByStartTime = (a: EventItem, b: EventItem) =>
+      Date.parse(a.dateISO) - Date.parse(b.dateISO);
     return {
-      todayEvents: events.filter((e) => isSameLocalDay(e.dateISO, today)),
-      tomorrowEvents: events.filter((e) => isSameLocalDay(e.dateISO, tomorrow)),
+      todayEvents: events
+        .filter((e) => isSameLocalDay(e.dateISO, today))
+        .sort(sortByStartTime),
+      tomorrowEvents: events
+        .filter((e) => isSameLocalDay(e.dateISO, tomorrow))
+        .sort(sortByStartTime),
     };
   }, [events]);
 
