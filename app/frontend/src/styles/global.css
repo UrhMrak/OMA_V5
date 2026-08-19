@@ -2093,6 +2093,40 @@ body.modal-open {
   text-align: center;
   padding: 14px 8px;
 }
+@media (max-width: 768px) {
+  .program-table {
+    min-width: 480px;
+  }
+  .modal .program-table-wrap {
+    margin-left: -6px;
+    margin-right: -4px;
+  }
+  .program-table thead th {
+    padding: 0 4px 4px;
+  }
+  .program-table thead th.program-col-no,
+  .program-table tbody td.program-col-no {
+    padding-left: 0;
+    padding-right: 2px;
+    width: 28px;
+    text-align: left;
+  }
+  .program-table tbody td {
+    padding: 3px 4px;
+  }
+  .program-table .program-col-actions {
+    width: 28px;
+    padding: 0 2px;
+  }
+  .program-input {
+    width: calc(100% + 8px);
+    margin: -3px -4px;
+    padding: 3px 4px;
+  }
+  .program-empty-row td {
+    padding: 14px 4px;
+  }
+}
 .skeleton {
   display: block;
   background: linear-gradient(
