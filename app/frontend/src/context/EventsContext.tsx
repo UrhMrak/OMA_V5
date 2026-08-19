@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 type EventsContextValue = {
   events: EventItem[];
   loaded: boolean;
-  loadEvents: () => Promise<void>;
+  loadEvents: () => Promise<EventItem[]>;
 };
 
 const EventsContext = createContext<EventsContextValue | null>(null);

@@ -5,6 +5,7 @@ import Dashboard from './routes/Dashboard';
 import CalendarPage from './routes/Calendar';
 import Library from './routes/Library';
 import Stats from './routes/Stats';
+import ProgramStats from './routes/ProgramStats';
 import About from './routes/About';
 import Settings from './routes/Settings';
 import Login from './routes/Auth/Login';
@@ -27,6 +28,7 @@ function Layout() {
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/library" element={<Library />} />
               <Route path="/stats" element={<Stats />} />
+              <Route path="/stats/program" element={<ProgramStats />} />
               <Route path="/about" element={<About />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>

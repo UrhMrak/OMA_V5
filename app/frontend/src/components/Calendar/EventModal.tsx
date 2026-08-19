@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
-import { EventItem } from '../../lib/types';
+import { EventItem, ProgramRow } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventsContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -24,10 +24,17 @@ import {
   getWeekKeyFromISO,
   syncProjectIdsForWeeks,
 } from '../../lib/projectId';
+import {
+  findProgramForProject,
+  getProgramRows,
+  programRowsToText,
+  propagateProgramToProject,
+} from '../../lib/program';
 import DeleteIcon from '../icons/DeleteIcon';
 import { useModalClose } from '../Layout/useModalClose';
 import AutoResizeTextarea from '../AutoResizeTextarea';
 import SuggestTextarea from '../SuggestTextarea';
+import ProgramTable from '../Program/ProgramTable';
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 const FALLBACK_EVENT_COLOR = '#2563eb';
@@ -127,9 +134,11 @@ export default function EventModal({
   const fieldSuggestions = useMemo(() => buildEventFieldSuggestions(events), [events]);
 
   const [form, setForm] = useState<Partial<EventItem>>(() => normalizeForm(event ?? draft));
+  const [programRows, setProgramRows] = useState<ProgramRow[]>(() => getProgramRows(event ?? draft));
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const lastPrefilledProjectIdRef = useRef<string | null>(null);
+  const loadedProgramProjectIdRef = useRef<string | null>(null);
   const { closing, requestClose } = useModalClose(onClose);
 
   useEffect(() => {
@@ -138,7 +147,9 @@ export default function EventModal({
     } else {
       setForm(normalizeForm(draft));
     }
+    setProgramRows(getProgramRows(event ?? draft));
     lastPrefilledProjectIdRef.current = null;
+    loadedProgramProjectIdRef.current = null;
   }, [event, draft]);
 
   // Lock background scroll while modal is open
@@ -157,6 +168,15 @@ export default function EventModal({
     });
   }, [form, events, isCreating, event?.id]);
 
+  // The program belongs to the project, so switching project pulls in its rows.
+  useEffect(() => {
+    const projectId = displayedProjectId.trim();
+    if (!projectId || loadedProgramProjectIdRef.current === projectId) return;
+    loadedProgramProjectIdRef.current = projectId;
+    const projectRows = findProgramForProject(events, projectId);
+    if (projectRows.length > 0) setProgramRows(projectRows);
+  }, [displayedProjectId, events]);
+
   async function syncAffectedWeeks(previousDateISO?: string, nextDateISO?: string) {
     const weekKeys = [
       ...new Set(
@@ -165,9 +185,29 @@ export default function EventModal({
           .filter(Boolean)
       ),
     ];
-    if (weekKeys.length === 0) return;
+    if (weekKeys.length === 0) return null;
     const freshEvents = await api.get<EventItem[]>('/api/events');
     await syncProjectIdsForWeeks(freshEvents, weekKeys);
+    return loadEvents();
+  }
+
+  /**
+   * Runs after the project ID sync so the fan-out targets the project the saved
+   * event actually ended up in, not the one predicted before re-indexing.
+   */
+  async function shareProgramWithProject(
+    syncedEvents: EventItem[] | null,
+    savedEventId: string,
+    fallbackProjectId: string
+  ) {
+    const latestEvents = syncedEvents ?? events;
+    const savedEvent = savedEventId
+      ? latestEvents.find((item) => item.id === savedEventId)
+      : undefined;
+    const projectId = (savedEvent?.projectId || fallbackProjectId || '').trim();
+    if (!projectId) return;
+
+    await propagateProgramToProject(latestEvents, projectId, programRows, savedEventId);
     await loadEvents();
   }
 
@@ -185,15 +225,20 @@ export default function EventModal({
         ...form,
         projectId,
         projectIdOverridden: !!form.projectIdOverridden,
+        programRows,
+        program: programRowsToText(programRows),
       };
       rememberLastUsedColor(form.color);
       const previousDateISO = event?.dateISO;
+      let savedEventId = event?.id || '';
       if (isCreating) {
-        await api.post('/api/events', payload);
+        const created = await api.post<EventItem>('/api/events', payload);
+        savedEventId = created?.id || '';
       } else if (event) {
         await api.put(`/api/events/${event.id}`, payload);
       }
-      await syncAffectedWeeks(previousDateISO, form.dateISO);
+      const syncedEvents = await syncAffectedWeeks(previousDateISO, form.dateISO);
+      await shareProgramWithProject(syncedEvents, savedEventId, projectId);
       if (onSave) {
         await Promise.resolve(onSave());
       }
@@ -507,22 +552,13 @@ export default function EventModal({
   }
 
   function programRow() {
-    const value = form.program || '';
     const readOnly = role !== 'admin';
-    const textareaStyle: CSSProperties = readOnly
-      ? { border: 'none', background: 'transparent' }
-      : {};
-
-    if (readOnly && !value) return null;
+    if (readOnly && programRows.length === 0) return null;
 
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.program')}</label>
-        {readOnly ? (
-          <div className="event-readonly-value">{value}</div>
-        ) : (
-          renderEditableTextarea(value, (nextValue) => setForm({ ...form, program: nextValue }), 'program', textareaStyle)
-        )}
+        <ProgramTable rows={programRows} onChange={setProgramRows} readOnly={readOnly} />
       </div>
     );
   }

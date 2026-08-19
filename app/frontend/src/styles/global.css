@@ -112,6 +112,56 @@ body {
   color: var(--primary);
   background: var(--accent-soft);
 }
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nav-dropdown-trigger:hover {
+  color: var(--primary);
+}
+.nav-dropdown-trigger.active {
+  color: var(--primary);
+  background: var(--accent-soft);
+}
+.nav-dropdown-chevron {
+  transition: transform 0.2s ease;
+}
+.nav-dropdown-chevron.expanded {
+  transform: rotate(180deg);
+}
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+.nav-dropdown-menu a {
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.nav-dropdown-menu a:hover {
+  background: var(--accent-soft);
+}
 .nav-right {
   display: flex;
   align-items: center;
@@ -183,7 +233,7 @@ body {
     transition: max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease;
   }
   .nav-collapse.open {
-    max-height: 480px;
+    max-height: 560px;
     opacity: 1;
     margin-top: 8px;
   }
@@ -195,6 +245,22 @@ body {
     padding: 10px 12px;
     border-radius: 8px;
   }
+  /* The collapsed nav clips overflow, so the dropdown flows inline on mobile. */
+  .nav-collapse .nav-dropdown-trigger {
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+  .nav-collapse .nav-dropdown-menu {
+    position: static;
+    min-width: 0;
+    padding: 2px 0 2px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .nav-collapse .nav-right {
     justify-content: space-between;
     border-top: 1px solid var(--border);
@@ -204,7 +270,8 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-toggle-bar,
-  .nav-collapse {
+  .nav-collapse,
+  .nav-dropdown-chevron {
     transition: none;
   }
 }
@@ -1913,6 +1980,119 @@ body.modal-open {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.program-page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.program-project-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: 460px;
+}
+.program-page-actions {
+  display: flex;
+  gap: 8px;
+}
+.program-table-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.program-table-wrap {
+  overflow-x: auto;
+}
+.program-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.program-table thead th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 8px 4px;
+  white-space: nowrap;
+}
+.program-table tbody td {
+  padding: 3px 8px;
+  color: var(--text);
+  vertical-align: top;
+}
+.program-table .program-col-no {
+  width: 40px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.program-table .program-col-composer {
+  width: 22%;
+}
+.program-table .program-col-instrumentation {
+  width: 26%;
+}
+.program-table .program-col-length {
+  width: 80px;
+}
+.program-table .program-col-actions {
+  width: 32px;
+  padding: 0 4px;
+  text-align: center;
+}
+/* Negative margins let the cell editor fill its cell so text stays on the column grid. */
+.program-input {
+  display: block;
+  width: calc(100% + 16px);
+  min-width: 0;
+  margin: -3px -8px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.program-input:hover {
+  background: var(--surface-hover);
+}
+.program-input:focus {
+  outline: 1px solid var(--primary);
+  outline-offset: -1px;
+  background: var(--surface-hover);
+}
+.program-readonly-value {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.program-add-row {
+  align-self: flex-start;
+}
+.program-empty-row td {
+  text-align: center;
+  padding: 14px 8px;
+}
 .skeleton {
   display: block;
   background: linear-gradient(
@@ -2228,6 +2408,16 @@ main.container .stats-table thead th,
 main.container .stats-table tbody td,
 main.container .stats-column-toggle {
   font-size: calc(14px * var(--text-scale));
+}
+
+main.container .program-table,
+main.container .program-table tbody td,
+main.container .program-input {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .program-table thead th {
+  font-size: calc(13px * var(--text-scale));
 }
 
 main.container .calendar-view-toggle button {

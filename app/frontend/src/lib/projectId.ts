@@ -6,12 +6,15 @@ export type WeekKey = string;
 
 type EventLike = Partial<EventItem> & Pick<EventItem, 'dateISO' | 'title' | 'color'>;
 
-export function getWeekKeyFromISO(dateISO: string): WeekKey {
-  const date = isoToWallDate(dateISO);
+export function getWeekKeyFromDate(date: Date): WeekKey {
   if (Number.isNaN(date.getTime())) return '';
   const yearShort = getISOWeekYear(date) % 100;
   const weekNum = getISOWeekNumber(date);
   return `${yearShort}|${weekNum}`;
+}
+
+export function getWeekKeyFromISO(dateISO: string): WeekKey {
+  return getWeekKeyFromDate(isoToWallDate(dateISO));
 }
 
 export function normalizeColor(color: string): string {
@@ -195,6 +198,7 @@ const CREATE_TEMPLATE_FIELDS: Array<keyof EventItem> = [
   'color',
   'title',
   'program',
+  'programRows',
   'conductor',
   'soloists',
   'otherParticipants',
@@ -218,7 +222,7 @@ export function buildCreateFormFromProjectId(
   };
 
   for (const key of CREATE_TEMPLATE_FIELDS) {
-    template[key] = source[key];
+    Object.assign(template, { [key]: source[key] });
   }
 
   return template;

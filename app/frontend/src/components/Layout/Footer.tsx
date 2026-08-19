@@ -21,7 +21,8 @@ export default function Footer() {
             <NavLink to="/" end>{t('nav.home')}</NavLink>
             <NavLink to="/calendar">{t('nav.calendar')}</NavLink>
             <NavLink to="/library">{t('nav.library')}</NavLink>
-            <NavLink to="/stats">{t('nav.stats')}</NavLink>
+            <NavLink to="/stats" end>{t('nav.statsEvents')}</NavLink>
+            <NavLink to="/stats/program">{t('nav.statsProgram')}</NavLink>
             <NavLink to="/about">{t('nav.about')}</NavLink>
           </nav>
         </div>

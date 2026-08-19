@@ -1,9 +1,18 @@
+export type ProgramRow = {
+  id: string;
+  composer: string;
+  title: string;
+  instrumentation: string;
+  length: string;
+};
+
 export type EventItem = {
   id: string;
   dateISO: string;
   title: string;
   color: string;
   program?: string;
+  programRows?: ProgramRow[];
   conductor?: string;
   soloists?: string;
   otherParticipants?: string;
