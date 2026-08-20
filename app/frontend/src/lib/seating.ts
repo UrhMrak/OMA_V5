@@ -244,6 +244,29 @@ export async function propagateSeatingToProject(
   await Promise.all(targets.map((event) => api.put(`/api/events/${event.id}`, payload)));
 }
 
+export function findStagePdfForProject(events: EventItem[], projectId: string): string {
+  const projectEvents = getProjectEvents(events, projectId).sort((a, b) =>
+    b.dateISO.localeCompare(a.dateISO)
+  );
+  for (const event of projectEvents) {
+    const path = (event.stagePdfPath || '').trim();
+    if (path) return path;
+  }
+  return '';
+}
+
+export async function propagateStagePdfToProject(
+  events: EventItem[],
+  projectId: string,
+  stagePdfPath: string
+): Promise<void> {
+  const targets = getProjectEvents(events, projectId);
+  if (targets.length === 0) return;
+
+  const payload = { stagePdfPath: stagePdfPath.trim() };
+  await Promise.all(targets.map((event) => api.put(`/api/events/${event.id}`, payload)));
+}
+
 export function resolveSeatingForProject(
   events: EventItem[],
   projectId: string,

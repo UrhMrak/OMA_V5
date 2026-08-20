@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { SeatingChart as SeatingChartData } from '../lib/types';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 import SeatingChart from '../components/Stage/SeatingChart';
+import StagePdfPanel from '../components/Stage/StagePdfPanel';
 import {
   PROJECT_QUERY_PARAM,
   buildProjectOptions,
@@ -23,17 +24,18 @@ import {
   emptySeatingChart,
   findConductorForProject,
   findSeatingForProject,
-  getInstrumentLabelKey,
+  findStagePdfForProject,
   isWeek34HljodritunProject,
   isWeek34MenningarnottProject,
   isWeek35KlassikinProject,
   propagateSeatingToProject,
+  propagateStagePdfToProject,
   resolveSeatingForProject,
-  searchAllSeating,
   seatingHasNamedPlayers,
   withDefaultInstruments,
 } from '../lib/seating';
 import { downloadSeatingPdf } from '../lib/seatingPdf';
+import { api } from '../lib/api';
 
 export default function Stage() {
   const { events, loaded, loadEvents } = useEvents();
@@ -45,24 +47,20 @@ export default function Stage() {
     () => searchParams.get(PROJECT_QUERY_PARAM) || ''
   );
   const [chart, setChart] = useState<SeatingChartData>(emptySeatingChart);
-  const [searchQuery, setSearchQuery] = useState('');
   const [addInstrumentKey, setAddInstrumentKey] = useState('');
   const [customLabel, setCustomLabel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [error, setError] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
   const loadedProjectIdRef = useRef<string | null>(null);
   const seededProjectsRef = useRef<Set<string>>(new Set());
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = role === 'admin';
   const projectOptions = useMemo(() => buildProjectOptions(events), [events]);
-  const trimmedSearchQuery = searchQuery.trim();
-  const searchHits = useMemo(
-    () => searchAllSeating(events, projectOptions, trimmedSearchQuery),
-    [events, projectOptions, trimmedSearchQuery]
-  );
-  const isSearching = trimmedSearchQuery.length > 0;
   const conductor = selectedProjectId ? findConductorForProject(events, selectedProjectId) : '';
+  const stagePdfPath = selectedProjectId ? findStagePdfForProject(events, selectedProjectId) : '';
   const visibleForMusician = isAdmin || seatingHasNamedPlayers(chart);
 
   const availableInstruments = INSTRUMENT_CATALOG.filter(
@@ -133,16 +131,6 @@ export default function Stage() {
     setSearchParams(projectId ? { [PROJECT_QUERY_PARAM]: projectId } : {}, { replace: true });
   }
 
-  function openSearchResult(projectId: string) {
-    setSearchQuery('');
-    selectProject(projectId);
-  }
-
-  function sectionLabel(instrument: string, customLabelValue?: string): string {
-    if (customLabelValue?.trim()) return customLabelValue.trim();
-    return t(getInstrumentLabelKey(instrument));
-  }
-
   function addInstrument() {
     if (!addInstrumentKey) return;
     if (addInstrumentKey === CUSTOM_INSTRUMENT && !customLabel.trim()) return;
@@ -200,6 +188,66 @@ export default function Stage() {
     }
   }
 
+  async function uploadStagePdf(file: File) {
+    if (!selectedProjectId || isUploadingPdf) return;
+    if (file.type !== 'application/pdf') {
+      setError(t('stagePage.pdfInvalidType'));
+      return;
+    }
+
+    setIsUploadingPdf(true);
+    setError('');
+    setSavedMessage('');
+    try {
+      const form = new FormData();
+      form.append('folder', `stage/${selectedProjectId}`);
+      form.append('files', file);
+      const result = await api.upload<{ files?: Array<{ path: string }> }>('/api/library/upload', form);
+      const path = result.files?.[0]?.path?.trim();
+      if (!path) throw new Error(t('stagePage.pdfUploadFailed'));
+
+      await propagateStagePdfToProject(events, selectedProjectId, path);
+      await loadEvents();
+      setSavedMessage(t('stagePage.pdfUploaded'));
+    } catch (uploadError) {
+      console.error('Upload stage PDF failed:', uploadError);
+      setError(
+        uploadError instanceof Error && uploadError.message
+          ? uploadError.message
+          : t('stagePage.pdfUploadFailed')
+      );
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  }
+
+  async function removeStagePdf() {
+    if (!selectedProjectId || isUploadingPdf || !stagePdfPath) return;
+    setIsUploadingPdf(true);
+    setError('');
+    setSavedMessage('');
+    try {
+      await propagateStagePdfToProject(events, selectedProjectId, '');
+      await loadEvents();
+      setSavedMessage(t('stagePage.pdfRemoved'));
+    } catch (removeError) {
+      console.error('Remove stage PDF failed:', removeError);
+      setError(
+        removeError instanceof Error && removeError.message
+          ? removeError.message
+          : t('stagePage.pdfRemoveFailed')
+      );
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  }
+
+  function handlePdfInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) void uploadStagePdf(file);
+  }
+
   if (!loaded) {
     return (
       <div>
@@ -221,60 +269,7 @@ export default function Stage() {
     <div>
       <h2 className="h2">{t('stagePage.title')}</h2>
 
-      <input
-        className="input program-search"
-        type="search"
-        placeholder={t('stagePage.search')}
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-
-      {isSearching ? (
-        <div className="program-search-results">
-          {searchHits.length === 0 ? (
-            <p className="muted">{t('stagePage.searchNoResults')}</p>
-          ) : (
-            <div className="program-table-wrap">
-              <table className="program-table program-search-table">
-                <thead>
-                  <tr>
-                    <th className="program-col-project" scope="col">{t('stagePage.searchProject')}</th>
-                    <th scope="col">{t('stagePage.searchInstrument')}</th>
-                    <th scope="col">{t('stagePage.searchPlayer')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {searchHits.map((hit) => {
-                    const projectLabel = formatProjectLabel(hit.projectId, hit.projectTitle);
-                    return (
-                      <tr
-                        key={`${hit.projectId}-${hit.playerId}`}
-                        className="program-search-hit"
-                        tabIndex={0}
-                        role="button"
-                        aria-label={t('stagePage.searchOpenProject', { project: projectLabel })}
-                        onClick={() => openSearchResult(hit.projectId)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            openSearchResult(hit.projectId);
-                          }
-                        }}
-                      >
-                        <td className="program-col-project">{projectLabel}</td>
-                        <td>{sectionLabel(hit.instrument, hit.customLabel)}</td>
-                        <td>
-                          <span className="program-readonly-value">{hit.playerName}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ) : projectOptions.length === 0 ? (
+      {projectOptions.length === 0 ? (
         <p className="muted">{t('stagePage.noProjects')}</p>
       ) : (
         <>
@@ -366,6 +361,39 @@ export default function Stage() {
           ) : (
             <p className="muted">{t('stagePage.emptyChart')}</p>
           )}
+
+          {isAdmin && (
+            <div className="stage-pdf-admin">
+              <input
+                ref={pdfInputRef}
+                type="file"
+                accept="application/pdf"
+                className="sr-only"
+                onChange={handlePdfInputChange}
+              />
+              <button
+                type="button"
+                className="btn"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={isUploadingPdf}
+              >
+                {isUploadingPdf ? t('stagePage.pdfUploading') : t('stagePage.uploadPdf')}
+              </button>
+              {stagePdfPath && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void removeStagePdf()}
+                  disabled={isUploadingPdf}
+                >
+                  {t('stagePage.removePdf')}
+                </button>
+              )}
+              <p className="muted small">{t('stagePage.pdfAdminHint')}</p>
+            </div>
+          )}
+
+          {stagePdfPath && <StagePdfPanel path={stagePdfPath} />}
 
           {error && <p className="error">{error}</p>}
           {savedMessage && <p className="muted small">{savedMessage}</p>}

@@ -2689,3 +2689,39 @@ main.container .stage-section-count {
   font-size: calc(12px * var(--text-scale));
 }
 
+.stage-pdf-admin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.stage-pdf-admin .muted {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.stage-pdf-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.stage-pdf-heading {
+  margin: 0 0 16px;
+  font-size: calc(18px * var(--text-scale));
+  font-weight: 600;
+}
+
+.stage-pdf-panel .pdf-pages-container {
+  align-items: stretch;
+}
+
+.stage-pdf-panel .pdf-page-canvas {
+  width: 100%;
+  max-width: 100%;
+}
+

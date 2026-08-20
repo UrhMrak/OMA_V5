@@ -32,6 +32,7 @@ export type EventItem = {
   program?: string;
   programRows?: ProgramRow[];
   seatingChart?: SeatingChart;
+  stagePdfPath?: string;
   conductor?: string;
   soloists?: string;
   otherParticipants?: string;
