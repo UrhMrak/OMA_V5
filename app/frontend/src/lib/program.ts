@@ -139,6 +139,65 @@ export function findProgramForProject(events: EventItem[], projectId: string): P
   return withText ? getProgramRows(withText) : [];
 }
 
+export type ProgramSearchHit = {
+  projectId: string;
+  projectTitle: string;
+  rowNumber: number;
+  row: ProgramRow;
+};
+
+type ProjectProgramMeta = {
+  projectId: string;
+  title: string;
+  latestDateISO: string;
+};
+
+export function searchAllPrograms(
+  events: EventItem[],
+  projects: ProjectProgramMeta[],
+  query: string
+): ProgramSearchHit[] {
+  const term = query.trim().toLowerCase();
+  if (!term) return [];
+
+  const hits: ProgramSearchHit[] = [];
+
+  for (const project of projects) {
+    const rows = findProgramForProject(events, project.projectId);
+    rows.forEach((row, index) => {
+      if (isProgramRowEmpty(row)) return;
+      const haystack = PROGRAM_COLUMNS.map((column) => row[column] || '')
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(term)) return;
+      hits.push({
+        projectId: project.projectId,
+        projectTitle: project.title,
+        rowNumber: index + 1,
+        row,
+      });
+    });
+  }
+
+  const latestByProject = new Map(
+    projects.map((project) => [project.projectId, project.latestDateISO])
+  );
+
+  hits.sort((a, b) => {
+    const dateCmp = (latestByProject.get(b.projectId) || '').localeCompare(
+      latestByProject.get(a.projectId) || ''
+    );
+    if (dateCmp !== 0) return dateCmp;
+    const titleCmp =
+      (a.projectTitle || a.projectId).localeCompare(b.projectTitle || b.projectId) ||
+      a.projectId.localeCompare(b.projectId);
+    if (titleCmp !== 0) return titleCmp;
+    return a.rowNumber - b.rowNumber;
+  });
+
+  return hits;
+}
+
 export async function propagateProgramToProject(
   events: EventItem[],
   projectId: string,

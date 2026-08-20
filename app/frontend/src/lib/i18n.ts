@@ -95,6 +95,10 @@ export const en = {
     saving: 'Saving\u2026',
     saved: 'Program saved.',
     saveFailed: 'Saving the program failed.',
+    search: 'Search all programs\u2026',
+    searchNoResults: 'No matching works found.',
+    searchProject: 'Project',
+    searchOpenProject: 'Open project {project}',
   },
   calendar: {
     viewLabel: 'Calendar view',
@@ -422,6 +426,10 @@ export const is: Translations = {
     saving: 'Vistar\u2026',
     saved: 'Efnisskr\u00E1 vistu\u00F0.',
     saveFailed: 'Ekki t\u00F3kst a\u00F0 vista efnisskr\u00E1.',
+    search: 'Leita \u00ED \u00F6llum efnisskr\u00E1m\u2026',
+    searchNoResults: 'Engin samsvarandi verk fundust.',
+    searchProject: 'Verkefni',
+    searchOpenProject: 'Opna verkefni {project}',
   },
   calendar: {
     viewLabel: 'Sko\u00F0un dagatals',

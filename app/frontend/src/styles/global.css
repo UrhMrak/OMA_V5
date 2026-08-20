@@ -2011,6 +2011,31 @@ body.modal-open {
   display: flex;
   gap: 8px;
 }
+.program-search {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 16px;
+}
+.program-search-results {
+  margin-bottom: 16px;
+}
+.program-search-table {
+  min-width: 720px;
+}
+.program-table .program-col-project {
+  width: 18%;
+  min-width: 120px;
+}
+.program-search-hit {
+  cursor: pointer;
+}
+.program-search-hit:hover {
+  background: var(--accent-soft);
+}
+.program-search-hit:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
 .program-table-section {
   display: flex;
   flex-direction: column;
