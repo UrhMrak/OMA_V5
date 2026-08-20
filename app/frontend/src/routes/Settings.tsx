@@ -14,7 +14,7 @@ const LANDING_OPTIONS: Array<{ value: LandingPage; labelKey: string }> = [
   { value: '/', labelKey: 'settings.landingDashboard' },
   { value: '/calendar', labelKey: 'settings.landingCalendar' },
   { value: '/library', labelKey: 'settings.landingLibrary' },
-  { value: '/stats', labelKey: 'settings.landingStats' },
+  { value: '/stage', labelKey: 'settings.landingStage' },
 ];
 
 export default function Settings() {

@@ -11,18 +11,18 @@ type Ctx = {
 const STORAGE_KEY = 'oma:eventSize';
 
 const EventSizeContext = createContext<Ctx>({
-  eventSize: 'large',
+  eventSize: 'compact',
   toggleEventSize: () => {},
   setEventSize: () => {},
 });
 
 function getInitialEventSize(): EventSize {
-  if (typeof window === 'undefined') return 'large';
+  if (typeof window === 'undefined') return 'compact';
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored === 'compact' || stored === 'large' ? stored : 'large';
+    return stored === 'compact' || stored === 'large' ? stored : 'compact';
   } catch {
-    return 'large';
+    return 'compact';
   }
 }
 

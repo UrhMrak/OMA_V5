@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
-export type LandingPage = '/' | '/calendar' | '/library' | '/stats';
+export type LandingPage = '/' | '/calendar' | '/library' | '/stage';
 export type CalendarView = 'month' | 'week';
 
 type AppPreferences = {
@@ -38,12 +38,14 @@ function readPreferences(): AppPreferences {
           ? parsed.defaultCalendarView
           : DEFAULTS.defaultCalendarView,
       defaultLandingPage:
-        parsed.defaultLandingPage === '/' ||
-        parsed.defaultLandingPage === '/calendar' ||
-        parsed.defaultLandingPage === '/library' ||
         parsed.defaultLandingPage === '/stats'
-          ? parsed.defaultLandingPage
-          : DEFAULTS.defaultLandingPage,
+          ? '/stage'
+          : parsed.defaultLandingPage === '/' ||
+              parsed.defaultLandingPage === '/calendar' ||
+              parsed.defaultLandingPage === '/library' ||
+              parsed.defaultLandingPage === '/stage'
+            ? parsed.defaultLandingPage
+            : DEFAULTS.defaultLandingPage,
       rememberLastLibraryFolder:
         typeof parsed.rememberLastLibraryFolder === 'boolean'
           ? parsed.rememberLastLibraryFolder
