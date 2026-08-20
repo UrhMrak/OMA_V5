@@ -2172,6 +2172,25 @@ body.modal-open {
     padding: 14px 4px;
   }
 }
+@media (min-width: 769px) {
+  .modal .program-table,
+  .modal .program-table tbody td,
+  .modal .program-input {
+    font-size: inherit;
+  }
+  .modal .program-table thead th {
+    font-size: 12px;
+  }
+  .modal .event-musician-details .program-table,
+  .modal .event-musician-details .program-table tbody td,
+  .modal .event-musician-details .program-input {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .modal .event-musician-details .program-table thead th {
+    font-size: 12px;
+  }
+}
 .skeleton {
   display: block;
   background: linear-gradient(
@@ -2507,6 +2526,28 @@ main.container .program-table thead th {
   }
 
   main.container .program-table thead th {
+    font-size: calc(12px * var(--text-scale));
+  }
+}
+
+@media (min-width: 769px) {
+  main.container .modal .program-table,
+  main.container .modal .program-table tbody td,
+  main.container .modal .program-input {
+    font-size: inherit;
+  }
+
+  main.container .modal .program-table thead th {
+    font-size: calc(12px * var(--text-scale));
+  }
+
+  main.container .modal .event-musician-details .program-table,
+  main.container .modal .event-musician-details .program-table tbody td,
+  main.container .modal .event-musician-details .program-input {
+    font-size: calc(13px * var(--text-scale));
+  }
+
+  main.container .modal .event-musician-details .program-table thead th {
     font-size: calc(12px * var(--text-scale));
   }
 }
