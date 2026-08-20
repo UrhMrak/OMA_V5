@@ -10,22 +10,23 @@ import {
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
-const MARGIN_X = 50;
-const MARGIN_TOP = 52;
-const MARGIN_BOTTOM = 48;
-const COLUMN_GUTTER = 28;
-const TITLE_SIZE = 18;
-const TITLE_GAP = 10;
-const CONDUCTOR_LABEL_SIZE = 9;
-const CONDUCTOR_NAME_SIZE = 12;
-const CONDUCTOR_BLOCK_GAP = 22;
-const SECTION_SIZE = 12;
-const SECTION_GAP = 5;
-const NAME_SIZE = 10;
-const NAME_LINE = 13;
-const COVER_LABEL_SIZE = 9;
-const COVER_LABEL_GAP = 4;
-const SECTION_BLOCK_GAP = 12;
+const MARGIN_X = 44;
+const MARGIN_TOP = 36;
+const MARGIN_BOTTOM = 32;
+const COLUMN_GUTTER = 20;
+const TITLE_SIZE = 14;
+const TITLE_GAP = 6;
+const CONDUCTOR_LABEL_SIZE = 7;
+const CONDUCTOR_NAME_SIZE = 9;
+const CONDUCTOR_BLOCK_GAP = 10;
+const SECTION_SIZE = 8.5;
+const SECTION_GAP = 2;
+const NAME_SIZE = 7;
+const NAME_LINE = 8.5;
+const COVER_LABEL_SIZE = 6.5;
+const COVER_LABEL_GAP = 2;
+const SECTION_BLOCK_GAP = 4;
+const MIN_CONTENT_SCALE = 0.55;
 
 const LEFT_COLUMN_SLOTS: InstrumentSlot[] = [
   'flute',
@@ -137,12 +138,10 @@ function buildSeatingPdf(
 ): Uint8Array {
   const leftLines = linesForSlots(chart, LEFT_COLUMN_SLOTS, t);
   const rightLines = linesForSlots(chart, RIGHT_COLUMN_SLOTS, t);
-  const headerHeight = measureHeaderHeight(conductor);
-  const firstColumnHeight = PAGE_HEIGHT - MARGIN_TOP - headerHeight - MARGIN_BOTTOM;
-  const laterColumnHeight = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
-  const leftPages = paginateLines(leftLines, firstColumnHeight, laterColumnHeight);
-  const rightPages = paginateLines(rightLines, firstColumnHeight, laterColumnHeight);
-  const pageCount = Math.max(leftPages.length, rightPages.length, 1);
+  const contentScale = fitContentScale(leftLines, rightLines, conductor);
+  const scaledLeft = scaleLines(leftLines, contentScale);
+  const scaledRight = scaleLines(rightLines, contentScale);
+  const headerHeight = measureHeaderHeight(conductor, contentScale);
   const columnWidth = (PAGE_WIDTH - MARGIN_X * 2 - COLUMN_GUTTER) / 2;
   const rightX = MARGIN_X + columnWidth + COLUMN_GUTTER;
 
@@ -163,36 +162,25 @@ function buildSeatingPdf(
   };
 
   const pageIds: number[] = [];
-  const contentIds: number[] = [];
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-    contentIds.push(0);
-    pageIds.push(0);
-  }
+  const contentIds: number[] = [0];
 
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-    const ops: string[] = [];
-    let columnTop = MARGIN_TOP;
-    if (pageIndex === 0) {
-      drawHeader(ops, title, conductor, t);
-      columnTop += headerHeight;
-    }
-    drawColumn(ops, leftPages[pageIndex] || [], MARGIN_X, columnTop);
-    drawColumn(ops, rightPages[pageIndex] || [], rightX, columnTop);
-    contentIds[pageIndex] = addStream(pdf, ops.join('\n'));
-  }
+  const ops: string[] = [];
+  const columnTop = MARGIN_TOP + headerHeight;
+  drawHeader(ops, title, conductor, t, contentScale);
+  drawColumn(ops, scaledLeft, MARGIN_X, columnTop);
+  drawColumn(ops, scaledRight, rightX, columnTop);
+  contentIds[0] = addStream(pdf, ops.join('\n'));
 
   const pagesId = pdf.addObject('<< /Type /Pages /Kids [] /Count 0 >>');
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-    pageIds[pageIndex] = pdf.addObject(
-      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +
-        `/Resources << /Font << /F1 ${fontIds.regular} 0 R /F2 ${fontIds.bold} 0 R /F3 ${fontIds.oblique} 0 R >> >> ` +
-        `/Contents ${contentIds[pageIndex]} 0 R >>`
-    );
-  }
+  pageIds[0] = pdf.addObject(
+    `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +
+      `/Resources << /Font << /F1 ${fontIds.regular} 0 R /F2 ${fontIds.bold} 0 R /F3 ${fontIds.oblique} 0 R >> >> ` +
+      `/Contents ${contentIds[0]} 0 R >>`
+  );
 
   pdf.replaceObject(
     pagesId,
-    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageCount} >>`
+    `<< /Type /Pages /Kids [${pageIds[0]} 0 R] /Count 1 >>`
   );
 
   const catalogId = pdf.addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
@@ -202,24 +190,56 @@ function buildSeatingPdf(
   return pdf.build(catalogId, infoId);
 }
 
-function measureHeaderHeight(conductor: string): number {
-  let height = TITLE_SIZE + TITLE_GAP;
+function measureLinesHeight(lines: PdfLine[]): number {
+  return lines.reduce((sum, line) => sum + Math.max(line.height, 0), 0);
+}
+
+function scaleLines(lines: PdfLine[], scale: number): PdfLine[] {
+  if (scale === 1) return lines;
+  return lines.map((line) => ({
+    ...line,
+    size: line.size * scale,
+    height: line.height * scale,
+    indent: (line.indent || 0) * scale,
+  }));
+}
+
+function fitContentScale(leftLines: PdfLine[], rightLines: PdfLine[], conductor: string): number {
+  const headerHeight = measureHeaderHeight(conductor, 1);
+  const contentHeight = Math.max(measureLinesHeight(leftLines), measureLinesHeight(rightLines));
+  const pageBody = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
+  const totalHeight = headerHeight + contentHeight;
+  if (totalHeight <= 0 || totalHeight <= pageBody) return 1;
+  return Math.max(MIN_CONTENT_SCALE, pageBody / totalHeight);
+}
+
+function measureHeaderHeight(conductor: string, scale = 1): number {
+  let height = (TITLE_SIZE + TITLE_GAP) * scale;
   if (conductor) {
-    height += CONDUCTOR_LABEL_SIZE + 4 + CONDUCTOR_NAME_SIZE + CONDUCTOR_BLOCK_GAP;
+    height += (CONDUCTOR_LABEL_SIZE + 4 + CONDUCTOR_NAME_SIZE + CONDUCTOR_BLOCK_GAP) * scale;
   } else {
-    height += 12;
+    height += 8 * scale;
   }
   return height;
 }
 
-function drawHeader(ops: string[], title: string, conductor: string, t: Translate) {
-  let y = MARGIN_TOP + TITLE_SIZE;
-  drawText(ops, title, MARGIN_X, y, 'bold', TITLE_SIZE);
-  y += TITLE_GAP + CONDUCTOR_LABEL_SIZE;
+function drawHeader(
+  ops: string[],
+  title: string,
+  conductor: string,
+  t: Translate,
+  scale = 1
+) {
+  const titleSize = TITLE_SIZE * scale;
+  const conductorLabelSize = CONDUCTOR_LABEL_SIZE * scale;
+  const conductorNameSize = CONDUCTOR_NAME_SIZE * scale;
+  let y = MARGIN_TOP + titleSize;
+  drawText(ops, title, MARGIN_X, y, 'bold', titleSize);
+  y += (TITLE_GAP + CONDUCTOR_LABEL_SIZE) * scale;
   if (!conductor) return;
-  drawText(ops, t('stagePage.conductor'), MARGIN_X, y, 'oblique', CONDUCTOR_LABEL_SIZE, true);
-  y += 4 + CONDUCTOR_NAME_SIZE;
-  drawText(ops, conductor, MARGIN_X, y, 'regular', CONDUCTOR_NAME_SIZE);
+  drawText(ops, t('stagePage.conductor'), MARGIN_X, y, 'oblique', conductorLabelSize, true);
+  y += (4 + CONDUCTOR_NAME_SIZE) * scale;
+  drawText(ops, conductor, MARGIN_X, y, 'regular', conductorNameSize);
 }
 
 function drawColumn(ops: string[], lines: PdfLine[], x: number, top: number) {
@@ -277,7 +297,7 @@ function linesForSlots(chart: SeatingChart, slots: InstrumentSlot[], t: Translat
           text: player.name.trim(),
           font: 'regular',
           size: NAME_SIZE,
-          indent: 10,
+          indent: 8,
           height: NAME_LINE,
         });
       }
@@ -296,47 +316,13 @@ function linesForSlots(chart: SeatingChart, slots: InstrumentSlot[], t: Translat
           text: player.name.trim(),
           font: 'regular',
           size: NAME_SIZE,
-          indent: 10,
+          indent: 8,
           height: NAME_LINE,
         });
       }
     }
   }
   return lines;
-}
-
-function paginateLines(
-  lines: PdfLine[],
-  firstPageHeight: number,
-  laterPageHeight: number
-): PdfLine[][] {
-  if (lines.length === 0) return [[]];
-  const pages: PdfLine[][] = [];
-  let current: PdfLine[] = [];
-  let used = 0;
-  let pageIndex = 0;
-
-  function pageHeight(): number {
-    return pageIndex === 0 ? firstPageHeight : laterPageHeight;
-  }
-
-  for (const line of lines) {
-    const height = Math.max(line.height, 0);
-    const isSpacer = !line.text && line.size === 0;
-    if (isSpacer && current.length === 0) continue;
-    if (current.length > 0 && used + height > pageHeight()) {
-      pages.push(current);
-      current = [];
-      used = 0;
-      pageIndex += 1;
-      if (isSpacer) continue;
-    }
-    current.push(line);
-    used += height;
-  }
-
-  if (current.length > 0 || pages.length === 0) pages.push(current);
-  return pages;
 }
 
 function sectionLabel(section: SeatingSection, t: Translate): string {
