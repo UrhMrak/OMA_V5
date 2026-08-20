@@ -17,11 +17,13 @@ import {
   CUSTOM_INSTRUMENT,
   INSTRUMENT_CATALOG,
   createSeatingSection,
+  createWeek34SeatingChart,
   createWeek35SeatingChart,
   emptySeatingChart,
   findConductorForProject,
   findSeatingForProject,
   getInstrumentLabelKey,
+  isWeek34HljodritunProject,
   isWeek35KlassikinProject,
   propagateSeatingToProject,
   resolveSeatingForProject,
@@ -29,6 +31,7 @@ import {
   seatingHasNamedPlayers,
   withDefaultInstruments,
 } from '../lib/seating';
+import { downloadSeatingPdf } from '../lib/seatingPdf';
 
 export default function Stage() {
   const { events, loaded, loadEvents } = useEvents();
@@ -47,7 +50,7 @@ export default function Stage() {
   const [error, setError] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
   const loadedProjectIdRef = useRef<string | null>(null);
-  const seedPersistRef = useRef(false);
+  const seededProjectsRef = useRef<Set<string>>(new Set());
 
   const isAdmin = role === 'admin';
   const projectOptions = useMemo(() => buildProjectOptions(events), [events]);
@@ -94,23 +97,31 @@ export default function Stage() {
   }, [loaded, selectedProjectId, events, projectOptions, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin || !loaded || seedPersistRef.current || projectOptions.length === 0) return;
-    const option = projectOptions.find(isWeek35KlassikinProject);
-    if (!option) return;
-    if (seatingHasNamedPlayers(findSeatingForProject(events, option.projectId))) {
-      seedPersistRef.current = true;
-      return;
-    }
-    seedPersistRef.current = true;
-    void (async () => {
-      try {
-        await propagateSeatingToProject(events, option.projectId, createWeek35SeatingChart());
-        await loadEvents();
-      } catch (seedError) {
-        console.error('Seed week 35 seating failed:', seedError);
-        seedPersistRef.current = false;
+    if (!isAdmin || !loaded || projectOptions.length === 0) return;
+
+    const seedTargets = [
+      { match: isWeek35KlassikinProject, create: createWeek35SeatingChart },
+      { match: isWeek34HljodritunProject, create: createWeek34SeatingChart },
+    ] as const;
+
+    for (const target of seedTargets) {
+      const option = projectOptions.find(target.match);
+      if (!option || seededProjectsRef.current.has(option.projectId)) continue;
+      if (seatingHasNamedPlayers(findSeatingForProject(events, option.projectId))) {
+        seededProjectsRef.current.add(option.projectId);
+        continue;
       }
-    })();
+      seededProjectsRef.current.add(option.projectId);
+      void (async () => {
+        try {
+          await propagateSeatingToProject(events, option.projectId, target.create());
+          await loadEvents();
+        } catch (seedError) {
+          console.error('Seed seating failed:', seedError);
+          seededProjectsRef.current.delete(option.projectId);
+        }
+      })();
+    }
   }, [isAdmin, loaded, events, projectOptions, loadEvents]);
 
   function selectProject(projectId: string) {
@@ -168,6 +179,21 @@ export default function Stage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  function exportPdf() {
+    const option = projectOptions.find((entry) => entry.projectId === selectedProjectId);
+    try {
+      downloadSeatingPdf({
+        projectTitle: (option?.title || '').trim(),
+        conductor,
+        chart,
+        t,
+      });
+    } catch (exportError) {
+      console.error('Export seating PDF failed:', exportError);
+      setError(t('stagePage.exportPdfFailed'));
     }
   }
 
@@ -264,8 +290,16 @@ export default function Stage() {
                 ))}
               </select>
             </label>
-            {isAdmin && (
-              <div className="program-page-actions">
+            <div className="program-page-actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={exportPdf}
+                disabled={!seatingHasNamedPlayers(chart)}
+              >
+                {t('stagePage.exportPdf')}
+              </button>
+              {isAdmin && (
                 <button
                   type="button"
                   className="btn primary"
@@ -274,8 +308,8 @@ export default function Stage() {
                 >
                   {isSaving ? t('stagePage.saving') : t('stagePage.save')}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {isAdmin && <p className="muted small">{t('stagePage.sharedHint')}</p>}

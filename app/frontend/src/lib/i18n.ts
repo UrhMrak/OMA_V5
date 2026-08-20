@@ -131,6 +131,8 @@ export const en = {
     covers: 'Cover',
     expandSection: 'Show {instrument}',
     collapseSection: 'Hide {instrument}',
+    exportPdf: 'Download PDF',
+    exportPdfFailed: 'Could not create the PDF.',
   },
   stage: {
     instruments: {
@@ -520,6 +522,8 @@ export const is: Translations = {
     covers: 'Bakvakt',
     expandSection: 'S\u00FDna {instrument}',
     collapseSection: 'Fela {instrument}',
+    exportPdf: 'S\u00E6kja PDF',
+    exportPdfFailed: 'Ekki t\u00F3kst a\u00F0 b\u00FAa til PDF.',
   },
   stage: {
     instruments: {
