@@ -1,6 +1,11 @@
 import { ProgramRow } from '../../lib/types';
 import { useLanguage } from '../../context/LanguageContext';
-import { PROGRAM_COLUMNS, ProgramColumn, createEmptyProgramRow } from '../../lib/program';
+import {
+  PROGRAM_COLUMNS,
+  ProgramColumn,
+  createEmptyProgramRow,
+  sumProgramLengths,
+} from '../../lib/program';
 import AutoResizeTextarea from '../AutoResizeTextarea';
 import DeleteIcon from '../icons/DeleteIcon';
 
@@ -21,6 +26,7 @@ export default function ProgramTable({
   readOnly: boolean;
 }) {
   const { t } = useLanguage();
+  const totalLength = sumProgramLengths(rows);
 
   if (readOnly && rows.length === 0) return null;
 
@@ -97,6 +103,17 @@ export default function ProgramTable({
               </tr>
             )}
           </tbody>
+          {totalLength && (
+            <tfoot>
+              <tr className="program-total-row">
+                <td colSpan={4} className="program-total-label">
+                  {t('program.total')}
+                </td>
+                <td className="program-col-length program-total-value">{totalLength}</td>
+                {!readOnly && <td className="program-col-actions" />}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       {!readOnly && (

@@ -85,6 +85,7 @@ export const en = {
     addRow: '+ Add row',
     deleteRow: 'Delete row {number}',
     empty: 'No works added yet.',
+    total: 'Total',
   },
   programPage: {
     title: 'Program',
@@ -487,6 +488,7 @@ export const is: Translations = {
     addRow: '+ B\u00E6ta vi\u00F0 l\u00EDnu',
     deleteRow: 'Ey\u00F0a l\u00EDnu {number}',
     empty: 'Engin verk skr\u00E1\u00F0 enn.',
+    total: 'Samtals',
   },
   programPage: {
     title: 'Efnisskr\u00E1',

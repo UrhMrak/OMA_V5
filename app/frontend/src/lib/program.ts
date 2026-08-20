@@ -23,6 +23,46 @@ export function isProgramRowEmpty(row: ProgramRow): boolean {
   return PROGRAM_COLUMNS.every((column) => !(row[column] || '').trim());
 }
 
+const PROGRAM_LENGTH_PATTERN = /^(\d{1,2}):(\d{2})$/;
+
+/** Parses a program length string (`HH:MM`) into total minutes. */
+export function parseProgramLength(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(PROGRAM_LENGTH_PATTERN);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (minutes >= 60) return null;
+
+  return hours * 60 + minutes;
+}
+
+/** Formats total minutes as `HH:MM`. */
+export function formatProgramLength(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+/** Sums every parseable length in the program rows, or `null` when none are valid. */
+export function sumProgramLengths(rows: ProgramRow[]): string | null {
+  let totalMinutes = 0;
+  let hasValidLength = false;
+
+  for (const row of rows) {
+    const minutes = parseProgramLength(row.length);
+    if (minutes === null) continue;
+    totalMinutes += minutes;
+    hasValidLength = true;
+  }
+
+  if (!hasValidLength) return null;
+  return formatProgramLength(totalMinutes);
+}
+
 function normalizeProgramRow(row: Partial<ProgramRow>): ProgramRow {
   return {
     id: row.id || createRowId(),

@@ -2085,6 +2085,20 @@ body.modal-open {
   padding: 0 4px;
   text-align: center;
 }
+.program-table tfoot td {
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--border);
+}
+.program-table .program-total-label {
+  text-align: right;
+  font-weight: 600;
+  color: var(--muted);
+}
+.program-table .program-total-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 /* Negative margins let the cell editor fill its cell so text stays on the column grid. */
 .program-input {
   display: block;
