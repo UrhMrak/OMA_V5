@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppPreferences } from '../../context/AppPreferencesContext';
+import AnimatedAppTitle from '../../components/AnimatedAppTitle';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -53,7 +54,7 @@ export default function Login() {
       </div>
       <div className="auth-content">
         <img className="auth-logo" src={`${import.meta.env.BASE_URL}sitelogo.svg`} alt={t('login.logoAlt')} />
-        <h1 className="auth-title">{t('login.appTitle')}</h1>
+        <AnimatedAppTitle title={t('login.appTitle')} />
       <form className="card auth-card" onSubmit={onSubmit}>
         <h1 className="h2">{t('login.signIn')}</h1>
         <label className="label">{t('login.username')}</label>
