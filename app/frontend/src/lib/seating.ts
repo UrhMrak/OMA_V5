@@ -252,6 +252,7 @@ export function resolveSeatingForProject(
   const stored = findSeatingForProject(events, projectId);
   if (seatingHasNamedPlayers(stored)) return stored;
   if (option && isWeek35KlassikinProject(option)) return createWeek35SeatingChart();
+  if (option && isWeek34MenningarnottProject(option)) return createWeek34MenningarnottSeatingChart();
   if (option && isWeek34HljodritunProject(option)) return createWeek34SeatingChart();
   return stored;
 }
@@ -322,6 +323,14 @@ export function isWeek34HljodritunProject(option: Pick<ProjectOption, 'title' | 
   return title.includes('hljóðritun') || title.includes('hljodritun');
 }
 
+export function isWeek34MenningarnottProject(
+  option: Pick<ProjectOption, 'title' | 'weekKeys'>
+): boolean {
+  if (!option.weekKeys.has(WEEK_34_KEY)) return false;
+  const title = foldTitle(option.title);
+  return title.includes('menningarnótt') || title.includes('menningarnott');
+}
+
 export function isWeek35KlassikinProject(option: Pick<ProjectOption, 'title' | 'weekKeys'>): boolean {
   if (option.weekKeys.has(WEEK_35_KEY)) return true;
   const title = foldTitle(option.title);
@@ -337,6 +346,100 @@ function namedSection(
     ...createSeatingSection(instrument),
     players: names.map((name) => createSeatingPlayer(name)),
     covers: covers.map((name) => createSeatingPlayer(name)),
+  };
+}
+
+/** Roster from Vika 34 Hljómsveitarlisti — Menningarnótt (20.–22. ágúst 2026). */
+export function createWeek34MenningarnottSeatingChart(): SeatingChart {
+  return {
+    sections: [
+      namedSection('flute', ['Rafael Adobas', 'Áshildur Haraldsdóttir', 'Caterina Compagno']),
+      namedSection('oboe', ['Julia Hantschel', 'Matthías Nardeau', 'Peter Tompkins']),
+      namedSection('clarinet', ['Grímur Helgason', 'Rúnar Óskarsson']),
+      namedSection('bassClarinet', []),
+      namedSection('bassoon', ['Clara Manaud', 'Brjánn Ingason', 'Bryndís Þórsdóttir']),
+      namedSection('contrabassoon', []),
+      namedSection('horn', [
+        'Stefán Jón Bernharðsson',
+        'Emil Friðfinnsson',
+        'Joseph Ognibene',
+        'Yi-Ling Shih',
+      ]),
+      namedSection('trumpet', ['Zach Silberschlag', 'Einar Jónsson', 'Eiríkur Örn Pálsson']),
+      namedSection('trombone', ['Jón Arnar Einarsson', 'Sigurður Þorbergsson']),
+      namedSection('bassTrombone', ['David Bobroff']),
+      namedSection('tuba', ['Charley Pollard']),
+      namedSection('harp', ['Katie Buckley']),
+      namedSection('piano', ['Liam Kaplan']),
+      namedSection('timpani', ['Ginevra Palo', 'Bryndís Halla Gylfadóttir']),
+      namedSection(
+        'percussion',
+        ['Frank Aarnink', 'Kjartan Guðnason', 'Emil Þorri Emilsson'],
+        ['Bryndís Björgvinsdóttir']
+      ),
+      namedSection(
+        'violin1',
+        [
+          'Una Sveinbjarnardóttir',
+          'Zbigniew Dubik',
+          'Herdís Mjöll Guðmundsdóttir',
+          'Helga Þóra Björgvinsdóttir',
+          'Pálína Árnadóttir',
+          'Laura Liu',
+          'Geirþrúður Ása Guðjónsdóttir Skelton',
+          'Bryndís Pálsdóttir',
+          'Margrét Kristjánsdóttir',
+          'Hildigunnur Halldórsdóttir',
+        ],
+        ['Olga Björk Ólafsdóttir', 'Sigrún Harðardóttir', 'Laufey Jensdóttir', 'Lin Wei', 'Joanna Bauer']
+      ),
+      namedSection(
+        'violin2',
+        [
+          'Alexandra Woroniecka',
+          'Justyna Bidler',
+          'Kristján Matthíasson',
+          'Sólrún Ylfa Ingimarsdóttir',
+          'Ólöf Þorvarðsdóttir',
+          'Þórdís Stross',
+          'Hekla Finnsdóttir',
+          'Sólveig Steinþórsdóttir',
+        ],
+        [
+          'Sigurlaug Eðvaldsdóttir',
+          'Ingrid Karlsdóttir',
+          'Margrét Þorsteinsdóttir',
+          'Emma Garðarsdóttir',
+          'Gunnhildur Daðadóttir',
+        ]
+      ),
+      namedSection(
+        'viola',
+        [
+          'Rita Porfiris',
+          'Sarah Buckley',
+          'Guðrún Hrund Harðardóttir',
+          'Guðrún Þórarinsdóttir',
+          'Sigrún Mary McCormick',
+          'Eyjólfur Bjarni Alfreðsson',
+        ],
+        ['Guðbjartur Hákonarson', 'Þórarinn Már Baldursson', 'Svava Bernharðsdóttir']
+      ),
+      namedSection('cello', [
+        'Sigurgeir Agnarsson',
+        'Steiney Sigurðardóttir',
+        'Guðný Jónasdóttir',
+        'Hrafnkell Orri Egilsson',
+        'Margrét Árnadóttir',
+        'Sigurður Bjarki Gunnarsson',
+        'Urh Mrak',
+      ]),
+      namedSection(
+        'bass',
+        ['Xun Yang', 'Jacek Karwan', 'Gunnlaugur Torfi Stefánsson', 'Richard Korn'],
+        ['T.C. Fitzgerald']
+      ),
+    ],
   };
 }
 

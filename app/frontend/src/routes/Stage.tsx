@@ -17,6 +17,7 @@ import {
   CUSTOM_INSTRUMENT,
   INSTRUMENT_CATALOG,
   createSeatingSection,
+  createWeek34MenningarnottSeatingChart,
   createWeek34SeatingChart,
   createWeek35SeatingChart,
   emptySeatingChart,
@@ -24,6 +25,7 @@ import {
   findSeatingForProject,
   getInstrumentLabelKey,
   isWeek34HljodritunProject,
+  isWeek34MenningarnottProject,
   isWeek35KlassikinProject,
   propagateSeatingToProject,
   resolveSeatingForProject,
@@ -101,6 +103,7 @@ export default function Stage() {
 
     const seedTargets = [
       { match: isWeek35KlassikinProject, create: createWeek35SeatingChart },
+      { match: isWeek34MenningarnottProject, create: createWeek34MenningarnottSeatingChart },
       { match: isWeek34HljodritunProject, create: createWeek34SeatingChart },
     ] as const;
 
