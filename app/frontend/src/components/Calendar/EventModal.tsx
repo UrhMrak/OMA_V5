@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { EventItem, ProgramRow } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventsContext';
@@ -35,6 +36,7 @@ import { useModalClose } from '../Layout/useModalClose';
 import AutoResizeTextarea from '../AutoResizeTextarea';
 import SuggestTextarea from '../SuggestTextarea';
 import ProgramTable from '../Program/ProgramTable';
+import { PROJECT_QUERY_PARAM } from '../../lib/projectOptions';
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
 const FALLBACK_EVENT_COLOR = '#2563eb';
@@ -128,6 +130,7 @@ export default function EventModal({
   const { role } = useAuth();
   const { events, loadEvents } = useEvents();
   const { t, locale } = useLanguage();
+  const navigate = useNavigate();
   const isAdmin = role === 'admin';
   const isCreating = event === null;
   const closeOnlyViaButton = isAdmin && !isCreating;
@@ -675,6 +678,23 @@ export default function EventModal({
             <div />
           )}
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+            {!isCreating && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  const projectId = displayedProjectId.trim();
+                  navigate(
+                    projectId
+                      ? `/stage?${PROJECT_QUERY_PARAM}=${encodeURIComponent(projectId)}`
+                      : '/stage'
+                  );
+                  requestClose();
+                }}
+              >
+                {t('event.openStage')}
+              </button>
+            )}
             {!isCreating && event && (
               <button className="btn" onClick={() => downloadICS(event)}>
                 {t('event.addToCalendar')}

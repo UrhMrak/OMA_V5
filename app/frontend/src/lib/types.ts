@@ -6,6 +6,24 @@ export type ProgramRow = {
   length: string;
 };
 
+export type SeatingPlayer = {
+  id: string;
+  name: string;
+};
+
+export type SeatingSection = {
+  id: string;
+  instrument: string;
+  customLabel?: string;
+  sharesStands: boolean;
+  players: SeatingPlayer[];
+  covers: SeatingPlayer[];
+};
+
+export type SeatingChart = {
+  sections: SeatingSection[];
+};
+
 export type EventItem = {
   id: string;
   dateISO: string;
@@ -13,6 +31,7 @@ export type EventItem = {
   color: string;
   program?: string;
   programRows?: ProgramRow[];
+  seatingChart?: SeatingChart;
   conductor?: string;
   soloists?: string;
   otherParticipants?: string;

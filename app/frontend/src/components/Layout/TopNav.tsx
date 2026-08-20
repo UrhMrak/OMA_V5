@@ -103,6 +103,7 @@ export default function TopNav() {
             <NavLink to="/" end>{t('nav.home')}</NavLink>
             <NavLink to="/calendar">{t('nav.calendar')}</NavLink>
             <NavLink to="/library">{t('nav.library')}</NavLink>
+            <NavLink to="/stage">{t('nav.stage')}</NavLink>
             <div className="nav-dropdown" ref={statsMenuRef}>
               <button
                 type="button"

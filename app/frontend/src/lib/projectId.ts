@@ -199,6 +199,7 @@ const CREATE_TEMPLATE_FIELDS: Array<keyof EventItem> = [
   'title',
   'program',
   'programRows',
+  'seatingChart',
   'conductor',
   'soloists',
   'otherParticipants',

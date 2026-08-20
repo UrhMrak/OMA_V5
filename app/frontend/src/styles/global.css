@@ -2515,3 +2515,177 @@ main.container .calendar-view-toggle--compact button {
     border-top: 1px solid var(--border);
   }
 }
+
+.stage-add-instrument {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0 8px;
+}
+.stage-add-instrument .input {
+  flex: 1 1 180px;
+  max-width: 280px;
+}
+.stage-chart {
+  margin-top: 16px;
+}
+.stage-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 64px;
+  align-items: start;
+}
+.stage-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.stage-slot {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.stage-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.stage-section-toggle:hover,
+.stage-section-toggle:focus-visible {
+  color: var(--primary);
+  outline: none;
+}
+.stage-section-title {
+  min-width: 0;
+}
+.stage-section-count {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+.stage-section-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.stage-section-chevron.expanded {
+  transform: rotate(180deg);
+}
+.stage-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 12px;
+}
+.stage-stands,
+.stage-name-list,
+.stage-edit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stage-name-list {
+  gap: 2px;
+  font-size: 14px;
+}
+.stage-stand {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.stage-stand-number {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 1.1em;
+  align-self: center;
+}
+.stage-stand-brace {
+  width: 8px;
+  border: 2px solid var(--muted);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  flex-shrink: 0;
+}
+.stage-stand-names {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: 14px;
+  min-width: 0;
+}
+.stage-covers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+.stage-covers-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.stage-edit-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.stage-edit-row .input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+}
+.stage-conductor {
+  text-align: center;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stage-conductor-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+.stage-conductor-name {
+  font-size: 14px;
+}
+
+@media (max-width: 800px) {
+  .stage-columns {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+main.container .stage-section-title,
+main.container .stage-conductor-label {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .stage-stand-names,
+main.container .stage-name-list,
+main.container .stage-conductor-name {
+  font-size: calc(14px * var(--text-scale));
+}
+
+main.container .stage-stand-number,
+main.container .stage-covers-label,
+main.container .stage-section-count {
+  font-size: calc(12px * var(--text-scale));
+}
+
