@@ -2138,6 +2138,7 @@ body.modal-open {
   }
   .program-table {
     min-width: 480px;
+    font-size: 12px;
   }
   .program-table-wrap {
     max-width: 100%;
@@ -2145,6 +2146,7 @@ body.modal-open {
   }
   .program-table thead th {
     padding: 0 4px 4px;
+    font-size: 12px;
   }
   .program-table thead th.program-col-no,
   .program-table tbody td.program-col-no {
@@ -2164,6 +2166,7 @@ body.modal-open {
     width: calc(100% + 8px);
     margin: -3px -4px;
     padding: 3px 4px;
+    font-size: 12px;
   }
   .program-empty-row td {
     padding: 14px 4px;
@@ -2494,6 +2497,18 @@ main.container .program-input {
 
 main.container .program-table thead th {
   font-size: calc(13px * var(--text-scale));
+}
+
+@media (max-width: 768px) {
+  main.container .program-table,
+  main.container .program-table tbody td,
+  main.container .program-input {
+    font-size: calc(12px * var(--text-scale));
+  }
+
+  main.container .program-table thead th {
+    font-size: calc(12px * var(--text-scale));
+  }
 }
 
 main.container .calendar-view-toggle button {
