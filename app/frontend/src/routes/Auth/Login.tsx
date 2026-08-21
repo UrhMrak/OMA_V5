@@ -10,6 +10,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
   const { setSession } = useAuth();
   const { language, setLanguage, t } = useLanguage();
@@ -18,11 +19,13 @@ export default function Login() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    setIsLoggingIn(true);
     try {
       const res = await api.post<{ role: 'admin' | 'user'; token: string }>('/api/auth/login', { username, password });
       setSession({ username, role: res.role }, res.token);
       navigate(defaultLandingPage);
     } catch (err: any) {
+      setIsLoggingIn(false);
       setError(err?.message || t('login.failed'));
     }
   }
@@ -62,7 +65,17 @@ export default function Login() {
         <label className="label">{t('login.password')}</label>
         <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
         {error && <div className="error">{error}</div>}
-        <button className="btn primary" type="submit">{t('login.signIn')}</button>
+        <button className="btn primary" type="submit" disabled={isLoggingIn}>{t('login.signIn')}</button>
+        {isLoggingIn && (
+          <p className="auth-logging-in" aria-live="polite">
+            {t('login.loggingIn')}
+            <span className="auth-logging-in-dots" aria-hidden="true">
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </p>
+        )}
       </form>
       </div>
     </div>

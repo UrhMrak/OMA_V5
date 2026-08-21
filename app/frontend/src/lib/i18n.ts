@@ -25,6 +25,7 @@ export const en = {
     usernamePlaceholder: 'admin or musician',
     password: 'Password',
     failed: 'Login failed',
+    loggingIn: 'Logging in',
     devCreds: 'dev creds: admin/admin123 or musician/musician123',
   },
   footer: {
@@ -428,6 +429,7 @@ export const is: Translations = {
     usernamePlaceholder: 'admin e\u00F0a musician',
     password: 'Lykilor\u00F0',
     failed: 'Innskr\u00E1ning mist\u00F3kst',
+    loggingIn: 'Skr\u00E1i inn',
     devCreds: '\u00FEr\u00F3unara\u00F0gangur: admin/admin123 e\u00F0a musician/musician123',
   },
   footer: {
