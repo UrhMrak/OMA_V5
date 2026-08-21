@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, Fragment } from 'react';
+import { useMemo, useRef, useState, Fragment, useLayoutEffect } from 'react';
 import { EventItem } from '../lib/types';
 import { useEvents } from '../context/EventsContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -395,11 +395,81 @@ export default function CalendarPage() {
 
   const visiblePeriodEvents = viewMode === 'month' ? monthEvents : weekEvents;
 
+  const monthOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [];
+    const minYear = now.getFullYear() - 1;
+    const minMonth = now.getMonth();
+    const maxYear = now.getFullYear() + 1;
+    const maxMonth = now.getMonth();
+
+    let year = minYear;
+    let month = minMonth;
+    while (year < maxYear || (year === maxYear && month <= maxMonth)) {
+      options.push({
+        value: `${year}-${month}`,
+        label: `${dict.calendar.months[month]} ${year}`,
+      });
+      if (month === 11) {
+        year += 1;
+        month = 0;
+      } else {
+        month += 1;
+      }
+    }
+    return options;
+  }, [now, dict]);
+
+  const handleMonthSelect = (value: string) => {
+    const [yearStr, monthStr] = value.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (Number.isNaN(year) || Number.isNaN(month)) return;
+    setCurrentYear(year);
+    setCurrentMonth(month);
+  };
+
+  const monthPickerLabel = `${dict.calendar.months[currentMonth]} ${currentYear}`;
+  const monthPickerMeasureRef = useRef<HTMLSpanElement>(null);
+  const [monthPickerWidth, setMonthPickerWidth] = useState<number>();
+
+  useLayoutEffect(() => {
+    if (viewMode !== 'month' || !monthPickerMeasureRef.current) return;
+    setMonthPickerWidth(monthPickerMeasureRef.current.offsetWidth);
+  }, [viewMode, monthPickerLabel]);
+
   return (
     <div>
       <div className="calendar-toolbar">
         <h2 className="h2" style={{ margin: 0 }}>
-          {headerLabel}
+          {viewMode === 'month' ? (
+            <label className="calendar-month-picker">
+              <span
+                ref={monthPickerMeasureRef}
+                className="calendar-month-picker-measure h2"
+                aria-hidden="true"
+              >
+                {monthPickerLabel}
+              </span>
+              <select
+                className="calendar-month-picker-select h2"
+                value={`${currentYear}-${currentMonth}`}
+                onChange={(event) => handleMonthSelect(event.target.value)}
+                aria-label={t('calendar.selectMonth')}
+                style={monthPickerWidth ? { width: monthPickerWidth } : undefined}
+              >
+                {monthOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="calendar-month-picker-chevron" aria-hidden="true">
+                ▾
+              </span>
+            </label>
+          ) : (
+            headerLabel
+          )}
         </h2>
         <div className="calendar-toolbar-actions">
           <div className="calendar-view-toggle" role="group" aria-label={t('calendar.viewLabel')}>
