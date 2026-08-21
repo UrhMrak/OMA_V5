@@ -513,21 +513,20 @@ export default function EventModal({
               const nextStartIso = inputValueToISO(e.target.value);
               if (!nextStartIso) return;
               const startMs = Date.parse(nextStartIso);
-              const startDatePart = e.target.value.slice(0, 10);
               setForm((prev) => {
-                const previousEndTime = formatWallTime(prev.endDateISO);
-                let nextEndIso = prev.endDateISO;
-
-                if (previousEndTime && startDatePart) {
-                  nextEndIso = inputValueToISO(`${startDatePart}T${previousEndTime}`) || nextEndIso;
-                } else {
-                  nextEndIso = new Date(startMs + DEFAULT_EVENT_DURATION_MS).toISOString();
-                }
+                const prevStartMs = prev.dateISO ? Date.parse(prev.dateISO) : NaN;
+                const prevEndMs = prev.endDateISO ? Date.parse(prev.endDateISO) : NaN;
+                const durationMs =
+                  !Number.isNaN(prevStartMs) &&
+                  !Number.isNaN(prevEndMs) &&
+                  prevEndMs >= prevStartMs
+                    ? prevEndMs - prevStartMs
+                    : DEFAULT_EVENT_DURATION_MS;
 
                 return {
                   ...prev,
                   dateISO: nextStartIso,
-                  endDateISO: nextEndIso,
+                  endDateISO: new Date(startMs + durationMs).toISOString(),
                 };
               });
             }}
