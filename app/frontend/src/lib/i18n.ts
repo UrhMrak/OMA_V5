@@ -35,7 +35,7 @@ export const en = {
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
     contact: 'Contact',
-    rights: '\u00A9 {year} Mrak Web Development. All rights reserved.',
+    rights: '\u00A9 {year} Mrak Web Studios. All rights reserved.',
   },
   dashboard: {
     latestNews: 'Latest News',
@@ -438,7 +438,7 @@ export const is: Translations = {
     privacy: 'Pers\u00F3nuverndarstefna',
     terms: '\u00DEj\u00F3nustuskilm\u00E1lar',
     contact: 'Haf\u00F0u samband',
-    rights: '\u00A9 {year} Mrak Web Development. Allur r\u00E9ttur \u00E1skilinn.',
+    rights: '\u00A9 {year} Mrak Web Studios. Allur r\u00E9ttur \u00E1skilinn.',
   },
   dashboard: {
     latestNews: 'N\u00FDjustu fr\u00E9ttir',
