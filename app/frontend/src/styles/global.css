@@ -798,6 +798,22 @@ body {
 .calendar-events-compact .calendar-cell .pill {
   white-space: nowrap;
 }
+.calendar-cell .pill .pill-detail {
+  display: block;
+  max-width: 100%;
+  font-size: 8px;
+  line-height: 1.15;
+  opacity: 0.85;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.calendar-events-large .calendar-cell .pill {
+  padding: 2px 2px;
+}
+.calendar-events-large .calendar-week-view .calendar-cell .pill {
+  padding: 3px 4px;
+}
 @media (max-width: 768px) {
   .calendar-week-view .calendar-cell,
   .calendar-week-view .calendar-week-number {

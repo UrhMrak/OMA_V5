@@ -1,5 +1,4 @@
 import { useTheme } from '../context/ThemeContext';
-import { useEventSize } from '../context/EventSizeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppPreferences, LandingPage, CalendarView } from '../context/AppPreferencesContext';
 import { useTextSize, TextSize } from '../context/TextSizeContext';
@@ -19,19 +18,19 @@ const LANDING_OPTIONS: Array<{ value: LandingPage; labelKey: string }> = [
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
-  const { eventSize, toggleEventSize } = useEventSize();
   const { textSize, setTextSize } = useTextSize();
   const { language, setLanguage, t } = useLanguage();
   const {
     defaultCalendarView,
     defaultLandingPage,
     rememberLastLibraryFolder,
+    compactEvents,
     setDefaultCalendarView,
     setDefaultLandingPage,
     setRememberLastLibraryFolder,
+    setCompactEvents,
   } = useAppPreferences();
   const isDark = theme === 'dark';
-  const isCompact = eventSize === 'compact';
 
   return (
     <div className="row-gap">
@@ -99,10 +98,10 @@ export default function Settings() {
           <button
             type="button"
             role="switch"
-            aria-checked={isCompact}
+            aria-checked={compactEvents}
             aria-label={t('settings.compactToggle')}
-            className={`theme-switch theme-switch--compact${isCompact ? ' on' : ''}`}
-            onClick={toggleEventSize}
+            className={`theme-switch theme-switch--compact${compactEvents ? ' on' : ''}`}
+            onClick={() => setCompactEvents(!compactEvents)}
           >
             <span className="theme-switch-thumb" />
           </button>

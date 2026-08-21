@@ -8,6 +8,7 @@ type AppPreferences = {
   defaultLandingPage: LandingPage;
   rememberLastLibraryFolder: boolean;
   lastLibraryPath: string;
+  compactEvents: boolean;
 };
 
 type Ctx = AppPreferences & {
@@ -15,22 +16,56 @@ type Ctx = AppPreferences & {
   setDefaultLandingPage: (page: LandingPage) => void;
   setRememberLastLibraryFolder: (enabled: boolean) => void;
   setLastLibraryPath: (path: string) => void;
+  setCompactEvents: (enabled: boolean) => void;
 };
 
 const STORAGE_KEY = 'oma:preferences';
+const LEGACY_EVENT_SIZE_KEY = 'oma:eventSize';
 
 const DEFAULTS: AppPreferences = {
   defaultCalendarView: 'month',
   defaultLandingPage: '/',
   rememberLastLibraryFolder: true,
   lastLibraryPath: '',
+  compactEvents: true,
 };
+
+function readLegacyCompactEvents(): boolean | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage.getItem(LEGACY_EVENT_SIZE_KEY);
+    if (stored === 'compact') return true;
+    if (stored === 'large') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function readCompactEvents(parsed: Partial<AppPreferences>): boolean {
+  if (typeof parsed.compactEvents === 'boolean') {
+    return parsed.compactEvents;
+  }
+
+  const legacy = readLegacyCompactEvents();
+  if (legacy !== null) {
+    return legacy;
+  }
+
+  return DEFAULTS.compactEvents;
+}
 
 function readPreferences(): AppPreferences {
   if (typeof window === 'undefined') return DEFAULTS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULTS;
+    if (!raw) {
+      const legacy = readLegacyCompactEvents();
+      return {
+        ...DEFAULTS,
+        compactEvents: legacy ?? DEFAULTS.compactEvents,
+      };
+    }
     const parsed = JSON.parse(raw) as Partial<AppPreferences>;
     return {
       defaultCalendarView:
@@ -51,6 +86,7 @@ function readPreferences(): AppPreferences {
           ? parsed.rememberLastLibraryFolder
           : DEFAULTS.rememberLastLibraryFolder,
       lastLibraryPath: typeof parsed.lastLibraryPath === 'string' ? parsed.lastLibraryPath : '',
+      compactEvents: readCompactEvents(parsed),
     };
   } catch {
     return DEFAULTS;
@@ -63,6 +99,7 @@ const AppPreferencesContext = createContext<Ctx>({
   setDefaultLandingPage: () => {},
   setRememberLastLibraryFolder: () => {},
   setLastLibraryPath: () => {},
+  setCompactEvents: () => {},
 });
 
 export function AppPreferencesProvider({ children }: { children: React.ReactNode }) {
@@ -92,6 +129,10 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
     setPrefs((current) => ({ ...current, lastLibraryPath: path }));
   }
 
+  function setCompactEvents(enabled: boolean) {
+    setPrefs((current) => ({ ...current, compactEvents: enabled }));
+  }
+
   return (
     <AppPreferencesContext.Provider
       value={{
@@ -100,6 +141,7 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
         setDefaultLandingPage,
         setRememberLastLibraryFolder,
         setLastLibraryPath,
+        setCompactEvents,
       }}
     >
       {children}

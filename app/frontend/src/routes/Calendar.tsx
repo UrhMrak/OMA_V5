@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState, Fragment } from 'react';
 import { EventItem } from '../lib/types';
 import { useEvents } from '../context/EventsContext';
-import { useEventSize } from '../context/EventSizeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAppPreferences } from '../context/AppPreferencesContext';
 import { api } from '../lib/api';
@@ -104,11 +103,16 @@ const getTransparentColor = (color: string, alpha = 0.15) => {
 
 const formatPillTime = (iso: string) => formatWallTime(iso);
 
+function getEventDetailLines(event: EventItem): string[] {
+  return [event.venue, event.conductor, event.ensemble, event.soloists].filter(
+    (line): line is string => Boolean(line?.trim()),
+  );
+}
+
 export default function CalendarPage() {
   const { events, loadEvents } = useEvents();
-  const { eventSize } = useEventSize();
   const { t, dict, locale } = useLanguage();
-  const { defaultCalendarView } = useAppPreferences();
+  const { defaultCalendarView, compactEvents } = useAppPreferences();
   const [selected, setSelected] = useState<EventItem | null>(null);
   const [createDraft, setCreateDraft] = useState<Partial<EventItem> | null>(null);
   const [copiedEvent, setCopiedEvent] = useState<EventItem | null>(() => {
@@ -470,7 +474,7 @@ export default function CalendarPage() {
         onTouchEnd={handleTouchEnd}
       >
         <div
-          className={`calendar-grid-with-weeks ${viewMode === 'week' ? 'calendar-week-view' : ''} ${eventSize === 'compact' ? 'calendar-events-compact' : ''} ${animClass}`}
+          className={`calendar-grid-with-weeks ${viewMode === 'week' ? 'calendar-week-view' : ''} ${compactEvents ? 'calendar-events-compact' : 'calendar-events-large'} ${animClass}`}
           onAnimationEnd={handleAnimationEnd}
         >
           <div className="calendar-week-number-head"></div>
@@ -507,6 +511,7 @@ export default function CalendarPage() {
                       const topLine = [formatPillTime(e.dateISO), e.activity]
                         .filter(Boolean)
                         .join(' ');
+                      const detailLines = compactEvents ? [] : getEventDetailLines(e);
                       return (
                         <button
                           key={e.id}
@@ -519,6 +524,11 @@ export default function CalendarPage() {
                         >
                           {topLine ? <span className="pill-top">{topLine}</span> : null}
                           <span className="pill-title">{e.title}</span>
+                          {detailLines.map((line, index) => (
+                            <span key={`${e.id}-detail-${index}`} className="pill-detail">
+                              {line}
+                            </span>
+                          ))}
                         </button>
                       );
                     })}
