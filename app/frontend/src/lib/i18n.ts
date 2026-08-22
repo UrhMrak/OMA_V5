@@ -291,6 +291,7 @@ export const en = {
     loadMore: 'Load more',
     open: 'Open',
     close: 'Close',
+    new: 'New',
   },
   pdf: {
     download: 'Download',
@@ -696,6 +697,7 @@ export const is: Translations = {
     loadMore: 'S\u00FDna meira',
     open: 'Opna',
     close: 'Loka',
+    new: 'N\u00FDtt',
   },
   pdf: {
     download: 'S\u00E6kja',

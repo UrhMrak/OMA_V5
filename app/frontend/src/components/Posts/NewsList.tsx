@@ -23,6 +23,37 @@ const POSTS_PER_LOAD = 3;
 const NEWS_PREVIEW_LINES = 3;
 const NEWS_TOGGLE_BTN_OVERLAP = 52;
 const COLLAPSE_TRANSITION_MS = 650;
+const SEEN_NEWS_STORAGE_PREFIX = 'oma-seen-news-posts';
+const newPostIdsThisVisitByUser = new Map<string, Set<string>>();
+
+function seenNewsStorageKey(username: string) {
+  return `${SEEN_NEWS_STORAGE_PREFIX}:${username}`;
+}
+
+function getNewPostIdsThisVisit(username: string): Set<string> {
+  let ids = newPostIdsThisVisitByUser.get(username);
+  if (!ids) {
+    ids = new Set();
+    newPostIdsThisVisitByUser.set(username, ids);
+  }
+  return ids;
+}
+
+function readSeenNewsPostIds(username: string): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(seenNewsStorageKey(username));
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((id): id is string => typeof id === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSeenNewsPostIds(username: string, ids: Set<string>) {
+  window.localStorage.setItem(seenNewsStorageKey(username), JSON.stringify([...ids]));
+}
 
 function shouldCollapsePost(post: PostItem): boolean {
   return Boolean(post.content.trim()) || (post.attachments?.length ?? 0) > 0;
@@ -261,8 +292,11 @@ export default function NewsList() {
   const objectUrlRef = useRef<string | null>(null);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const loadMoreInViewRef = useRef(false);
+  const seenNewsIdsRef = useRef<Set<string> | null>(null);
   const { role, username } = useAuth();
   const isAdmin = role === 'admin' || username === 'admin';
+  const isMusician = !isAdmin && (role === 'user' || username === 'musician');
+  const [newPostIds, setNewPostIds] = useState<Set<string>>(() => new Set());
   const { t } = useLanguage();
 
   usePageReady(true);
@@ -379,6 +413,36 @@ export default function NewsList() {
   }
 
   useEffect(() => { refresh(); }, []);
+
+  useEffect(() => {
+    seenNewsIdsRef.current = null;
+  }, [username]);
+
+  useEffect(() => {
+    if (!isMusician || !username || !loaded) return;
+
+    if (!seenNewsIdsRef.current) {
+      seenNewsIdsRef.current = readSeenNewsPostIds(username);
+    }
+    const seen = seenNewsIdsRef.current;
+    const shownNew = getNewPostIdsThisVisit(username);
+    let persisted = false;
+
+    for (const post of posts.slice(0, visibleCount)) {
+      if (shownNew.has(post.id) || seen.has(post.id)) continue;
+      shownNew.add(post.id);
+      seen.add(post.id);
+      persisted = true;
+    }
+
+    setNewPostIds((prev) => {
+      if (prev.size === shownNew.size && [...shownNew].every((id) => prev.has(id))) {
+        return prev;
+      }
+      return new Set(shownNew);
+    });
+    if (persisted) writeSeenNewsPostIds(username, seen);
+  }, [isMusician, username, loaded, posts, visibleCount]);
 
   useEffect(() => {
     loadMoreInViewRef.current = false;
@@ -659,7 +723,13 @@ export default function NewsList() {
       ) : (
       <ul className="card-list">
         {posts.slice(0, visibleCount).map((p) => (
-          <li key={p.id} className="card">
+          <li
+            key={p.id}
+            className={`card${isMusician && newPostIds.has(p.id) ? ' news-post-card--new' : ''}`}
+          >
+            {isMusician && newPostIds.has(p.id) && (
+              <span className="news-new-badge">{t('news.new')}</span>
+            )}
             {editingId === p.id ? (
               <div className="row-gap">
                 <div className="news-admin-actions">
