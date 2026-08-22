@@ -563,12 +563,13 @@ export default function CalendarPage() {
                 const isAdjacentMonth =
                   viewMode === 'month' &&
                   (cell.getFullYear() !== currentYear || cell.getMonth() !== currentMonth);
+                const isWeekend = dayIdx >= 5;
                 const canPasteHere = isPasteMode;
                 const canCreateHere = role === 'admin' && !isPasteMode;
                 return (
                   <div
                     key={dayIdx}
-                    className={`calendar-cell ${isAdjacentMonth ? 'calendar-cell-adjacent' : ''} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''} ${canCreateHere ? 'calendar-cell-clickable' : ''}`}
+                    className={`calendar-cell ${isWeekend ? 'calendar-cell-weekend' : ''} ${isAdjacentMonth ? 'calendar-cell-adjacent' : ''} ${isToday ? 'calendar-cell-today' : ''} ${canPasteHere ? 'calendar-cell-pasteable' : ''} ${canCreateHere ? 'calendar-cell-clickable' : ''}`}
                     onClick={() => handleDayClick(cell)}
                     role={canPasteHere || canCreateHere ? 'button' : undefined}
                     title={canPasteHere ? t('calendar.pasteHere') : undefined}
