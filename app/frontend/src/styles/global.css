@@ -2,16 +2,17 @@
   --bg: #ffffff;
   --text: #0f172a;
   --muted: #64748b;
-  --primary: #2563eb;
-  --primary-2: #1e40af;
+  --primary: #0d77d4;
+  --primary-2: #0a5fa8;
+  --primary-dark: #0a5fa8;
   --card: #f8fafc;
   --border: #e2e8f0;
   --surface: #ffffff;
   --surface-weekend: #f8fafc;
   --surface-hover: #f1f5f9;
-  --accent-soft: #eef2ff;
+  --accent-soft: #e8f4fd;
   --topnav-bg: rgba(255, 255, 255, 0.65);
-  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #bfdbfe 100%);
+  --bg-gradient: linear-gradient(135deg, #ffffff 0%, #b8d9f5 100%);
   --shadow-color: rgba(0, 0, 0, 0.12);
   --skeleton-base: #e2e8f0;
   --skeleton-highlight: #f1f5f9;
@@ -21,16 +22,17 @@
   --bg: #0f172a;
   --text: #e2e8f0;
   --muted: #94a3b8;
-  --primary: #60a5fa;
-  --primary-2: #3b82f6;
+  --primary: #0d77d4;
+  --primary-2: #0a5fa8;
+  --primary-dark: #3d9ae8;
   --card: #1e293b;
   --border: #334155;
   --surface: #1e293b;
   --surface-weekend: #283548;
   --surface-hover: #334155;
-  --accent-soft: #1e3a8a;
+  --accent-soft: #0b3560;
   --topnav-bg: rgba(15, 23, 42, 0.8);
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #0a3d6e 100%);
   --shadow-color: rgba(0, 0, 0, 0.5);
   --skeleton-base: #1e293b;
   --skeleton-highlight: #334155;
@@ -794,7 +796,7 @@ body {
   opacity: 0.7;
 }
 .calendar-cell-today {
-  border: 1px solid #60a5fa !important;
+  border: 1px solid var(--primary) !important;
 }
 .calendar-cell-pasteable {
   cursor: copy;
@@ -967,7 +969,7 @@ body {
     font-size: 8px;
     font-weight: 700;
     line-height: 1;
-    color: #2563eb;
+    color: var(--primary);
     pointer-events: none;
   }
   .calendar-cell:has(.calendar-week-badge) .calendar-date {
@@ -1411,7 +1413,7 @@ body.modal-open {
 }
 .upload-progress-fill {
   height: 100%;
-  background: #2563eb;
+  background: var(--primary);
   border-radius: 3px;
   transition: width 0.15s ease;
 }
@@ -1533,7 +1535,7 @@ body.modal-open {
 }
 .news-attachment-link:hover,
 .news-attachment-link:focus {
-  color: var(--primary-dark, #1d4ed8);
+  color: var(--primary-dark);
 }
 .news-load-more {
   width: 100%;
@@ -1668,7 +1670,7 @@ body.modal-open {
 }
 .news-content-link:hover,
 .news-content-link:focus {
-  color: var(--primary-dark, #1d4ed8);
+  color: var(--primary-dark);
   outline: none;
 }
 .news-attachment-link:focus {

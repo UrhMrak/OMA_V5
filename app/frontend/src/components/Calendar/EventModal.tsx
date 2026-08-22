@@ -40,7 +40,7 @@ import ProgramTable from '../Program/ProgramTable';
 import { PROJECT_QUERY_PARAM } from '../../lib/projectOptions';
 
 const DEFAULT_EVENT_DURATION_MS = 3 * 60 * 60 * 1000;
-const FALLBACK_EVENT_COLOR = '#2563eb';
+const FALLBACK_EVENT_COLOR = '#0D77D4';
 const LAST_EVENT_COLOR_KEY = 'oma:lastEventColor';
 
 function getLastUsedColor(): string {
