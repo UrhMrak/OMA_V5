@@ -1555,7 +1555,7 @@ body.modal-open {
   letter-spacing: 0.08em;
   line-height: 1.2;
   text-transform: uppercase;
-  color: #7dd3fc;
+  color: var(--primary);
   pointer-events: none;
 }
 .news-post-header {
