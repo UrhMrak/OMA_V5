@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import PdfDocumentView from '../PdfDocumentView';
+import WaitingMessage from '../WaitingMessage';
 import { API_BASE, authHeaders } from '../../lib/api';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -57,7 +58,13 @@ export default function StagePdfPanel({ path }: StagePdfPanelProps) {
   return (
     <section className="stage-pdf-panel" aria-label={t('stagePage.pdfHeading')}>
       <h3 className="stage-pdf-heading">{t('stagePage.pdfHeading')}</h3>
-      {loading && <p className="muted">{t('pdf.loading')}</p>}
+      {loading && (
+        <p className="muted">
+          <WaitingMessage as="span" live="off">
+            {t('pdf.loading')}
+          </WaitingMessage>
+        </p>
+      )}
       {error && <p className="error">{error}</p>}
       {objectUrl && <PdfDocumentView objectUrl={objectUrl} />}
     </section>

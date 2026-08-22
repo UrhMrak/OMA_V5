@@ -32,6 +32,7 @@ import {
   propagateProgramToProject,
 } from '../../lib/program';
 import DeleteIcon from '../icons/DeleteIcon';
+import WaitingMessage from '../WaitingMessage';
 import { useModalClose } from '../Layout/useModalClose';
 import AutoResizeTextarea from '../AutoResizeTextarea';
 import SuggestTextarea from '../SuggestTextarea';
@@ -671,7 +672,13 @@ export default function EventModal({
               aria-label={isDeleting ? t('event.deleting') : t('event.deleteEvent')}
               title={isDeleting ? t('event.deleting') : t('event.deleteEvent')}
             >
-              {isDeleting ? t('event.deleting') : <DeleteIcon size={16} />}
+              {isDeleting ? (
+                <WaitingMessage as="span" live="off">
+                  {t('event.deleting')}
+                </WaitingMessage>
+              ) : (
+                <DeleteIcon size={16} />
+              )}
             </button>
           ) : (
             <div />
@@ -719,9 +726,9 @@ export default function EventModal({
           </div>
         </div>
         {isAdmin && isSaving ? (
-          <div className="event-modal-saving" aria-live="polite">
+          <WaitingMessage className="event-modal-saving waiting-message-accent">
             {t('event.saving')}
-          </div>
+          </WaitingMessage>
         ) : null}
       </div>
     </div>

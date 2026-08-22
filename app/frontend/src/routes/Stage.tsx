@@ -8,6 +8,7 @@ import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 import SeatingChart from '../components/Stage/SeatingChart';
 import StagePdfPanel from '../components/Stage/StagePdfPanel';
+import WaitingMessage from '../components/WaitingMessage';
 import {
   PROJECT_QUERY_PARAM,
   buildProjectOptions,
@@ -304,7 +305,13 @@ export default function Stage() {
                   onClick={() => void saveSeating()}
                   disabled={isSaving}
                 >
-                  {isSaving ? t('stagePage.saving') : t('stagePage.save')}
+                  {isSaving ? (
+                    <WaitingMessage as="span" live="off">
+                      {t('stagePage.saving')}
+                    </WaitingMessage>
+                  ) : (
+                    t('stagePage.save')
+                  )}
                 </button>
               )}
             </div>
@@ -377,7 +384,13 @@ export default function Stage() {
                 onClick={() => pdfInputRef.current?.click()}
                 disabled={isUploadingPdf}
               >
-                {isUploadingPdf ? t('stagePage.pdfUploading') : t('stagePage.uploadPdf')}
+                {isUploadingPdf ? (
+                  <WaitingMessage as="span" live="off">
+                    {t('stagePage.pdfUploading')}
+                  </WaitingMessage>
+                ) : (
+                  t('stagePage.uploadPdf')
+                )}
               </button>
               {stagePdfPath && (
                 <button

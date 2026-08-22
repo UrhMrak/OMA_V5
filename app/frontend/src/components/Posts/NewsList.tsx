@@ -7,6 +7,7 @@ import { usePageReady } from '../Layout/PageTransition';
 import { SkeletonCardList } from '../Layout/Skeleton';
 import PdfViewerModal from './PdfViewerModal';
 import AutoResizeTextarea from '../AutoResizeTextarea';
+import WaitingMessage from '../WaitingMessage';
 
 type PostAttachment = NonNullable<PostItem['attachments']>[number];
 
@@ -225,7 +226,13 @@ function SaveProgressBar({
         <div className="upload-progress-fill" style={{ width: `${progress}%` }} />
       </div>
       <span className="upload-progress-label">
-        {processing ? processingLabel : `${progress}%`}
+        {processing ? (
+          <WaitingMessage as="span" live="off">
+            {processingLabel}
+          </WaitingMessage>
+        ) : (
+          `${progress}%`
+        )}
       </span>
     </div>
   );
@@ -701,7 +708,13 @@ export default function NewsList() {
                         onClick={() => remove(p.id)}
                         disabled={deletingId === p.id}
                       >
-                        {deletingId === p.id ? t('news.deleting') : t('news.delete')}
+                        {deletingId === p.id ? (
+                          <WaitingMessage as="span" live="off">
+                            {t('news.deleting')}
+                          </WaitingMessage>
+                        ) : (
+                          t('news.delete')
+                        )}
                       </button>
                     </div>
                   )}

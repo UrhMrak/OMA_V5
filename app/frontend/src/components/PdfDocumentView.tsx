@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { useLanguage } from '../context/LanguageContext';
+import WaitingMessage from './WaitingMessage';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -95,7 +96,13 @@ export default function PdfDocumentView({ objectUrl }: PdfDocumentViewProps) {
 
   return (
     <>
-      {rendering && <p className="muted pdf-loading">{t('pdf.loading')}</p>}
+      {rendering && (
+        <p className="muted pdf-loading">
+          <WaitingMessage as="span" live="off">
+            {t('pdf.loading')}
+          </WaitingMessage>
+        </p>
+      )}
       {renderError && <div className="error">{renderError}</div>}
       <div ref={containerRef} className="pdf-pages-container" />
     </>

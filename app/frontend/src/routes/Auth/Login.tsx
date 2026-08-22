@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppPreferences } from '../../context/AppPreferencesContext';
 import AnimatedAppTitle from '../../components/AnimatedAppTitle';
+import WaitingMessage from '../../components/WaitingMessage';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -67,14 +68,9 @@ export default function Login() {
         {error && <div className="error">{error}</div>}
         <button className="btn primary" type="submit" disabled={isLoggingIn}>{t('login.signIn')}</button>
         {isLoggingIn && (
-          <p className="auth-logging-in" aria-live="polite">
+          <WaitingMessage as="p" className="waiting-message-accent waiting-message-block">
             {t('login.loggingIn')}
-            <span className="auth-logging-in-dots" aria-hidden="true">
-              <span>.</span>
-              <span>.</span>
-              <span>.</span>
-            </span>
-          </p>
+          </WaitingMessage>
         )}
       </form>
       </div>

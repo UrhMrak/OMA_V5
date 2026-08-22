@@ -1,6 +1,7 @@
 import { useModalClose } from '../Layout/useModalClose';
 import { useLanguage } from '../../context/LanguageContext';
 import PdfDocumentView from '../PdfDocumentView';
+import WaitingMessage from '../WaitingMessage';
 
 type PdfViewerModalProps = {
   name: string;
@@ -49,7 +50,13 @@ export default function PdfViewerModal({
           </div>
         </div>
         <div className="pdf-modal-body">
-          {loading && <p className="muted">{t('pdf.loading')}</p>}
+          {loading && (
+            <p className="muted">
+              <WaitingMessage as="span" live="off">
+                {t('pdf.loading')}
+              </WaitingMessage>
+            </p>
+          )}
           {error && <div className="error">{error}</div>}
           {objectUrl && <PdfDocumentView objectUrl={objectUrl} />}
         </div>

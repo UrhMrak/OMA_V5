@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
 import ProgramTable from '../components/Program/ProgramTable';
+import WaitingMessage from '../components/WaitingMessage';
 import {
   findProgramForProject,
   PROGRAM_COLUMNS,
@@ -207,7 +208,13 @@ export default function ProgramStats() {
                   onClick={() => void saveProgram()}
                   disabled={isSaving}
                 >
-                  {isSaving ? t('programPage.saving') : t('programPage.save')}
+                  {isSaving ? (
+                    <WaitingMessage as="span" live="off">
+                      {t('programPage.saving')}
+                    </WaitingMessage>
+                  ) : (
+                    t('programPage.save')
+                  )}
                 </button>
               </div>
             )}

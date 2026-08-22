@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE, api, authHeaders } from '../../lib/api';
 import DeleteIcon from '../icons/DeleteIcon';
+import WaitingMessage from '../WaitingMessage';
 import PdfViewerModal from '../Posts/PdfViewerModal';
 import {
   addRecentLibraryFile,
@@ -334,7 +335,13 @@ function UploadButton({ folderPath, onUploaded }: { folderPath: string; onUpload
           title={!canUpload ? t('library.selectFolderToUpload') : undefined}
         >
           <UploadIcon />
-          {busy ? t('library.uploading') : t('library.upload')}
+          {busy ? (
+            <WaitingMessage as="span" live="off">
+              {t('library.uploading')}
+            </WaitingMessage>
+          ) : (
+            t('library.upload')
+          )}
           <ChevronIcon expanded={menuOpen} />
         </button>
         {menuOpen && canUpload && (
@@ -374,7 +381,13 @@ function UploadButton({ folderPath, onUploaded }: { folderPath: string; onUpload
             <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
           </div>
           <span className="upload-progress-label">
-            {uploadProcessing ? t('library.uploadProcessing') : `${uploadProgress}%`}
+            {uploadProcessing ? (
+              <WaitingMessage as="span" live="off">
+                {t('library.uploadProcessing')}
+              </WaitingMessage>
+            ) : (
+              `${uploadProgress}%`
+            )}
           </span>
         </div>
       )}
