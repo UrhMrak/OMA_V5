@@ -212,15 +212,69 @@ function collectAddresses(value: AddressObject | AddressObject[] | undefined): s
 }
 
 function emailPlainText(text: string | false | undefined, html: string | false | undefined): string {
-  if (typeof text === 'string' && text.trim()) return text;
-  if (typeof html === 'string' && html.trim()) return htmlToText(html);
+  const htmlString = typeof html === 'string' ? html : '';
+  const textString = typeof text === 'string' ? text : '';
+  if (htmlString.trim() && /<a\s/i.test(htmlString) && /href\s*=/i.test(htmlString)) {
+    return htmlToText(htmlString);
+  }
+  if (textString.trim()) return convertPlaintextEmailLinks(textString);
+  if (htmlString.trim()) return htmlToText(htmlString);
   return '';
 }
 
+function toSafeHttpUrl(raw: string): string | null {
+  const trimmed = raw
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .trim();
+  if (!trimmed) return null;
+  const withProtocol = /^www\./i.test(trimmed) ? `https://${trimmed}` : trimmed;
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function convertPlaintextEmailLinks(text: string): string {
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const toMarkdown = (lead: string, rawLabel: string, url: string, takeLastSentence: boolean) => {
+    const trimmed = rawLabel.trim();
+    if (!trimmed || /^(?:https?:\/\/|www\.)/i.test(trimmed)) return null;
+    const sentenceMatch = takeLastSentence ? trimmed.match(/^(.*[.!?])(\s+)(.+)$/) : null;
+    const label = (sentenceMatch ? sentenceMatch[3] : trimmed).trim();
+    const prefix = sentenceMatch ? `${sentenceMatch[1]}${sentenceMatch[2]}` : '';
+    const href = toSafeHttpUrl(url);
+    if (!href || !label) return null;
+    return `${lead}${prefix}[${label}](${href})`;
+  };
+  const withNextLine = normalized.replace(
+    /(^|\n)([^\n<>]+)\n[ \t]*<[ \t]*((?:https?:\/\/|www\.)[^>\s]+)[ \t]*>/g,
+    (full, lead, rawLabel, url) => toMarkdown(lead, rawLabel, url, false) ?? full
+  );
+  return withNextLine.replace(
+    /(^|\n)([^\n<>]*\S)[ \t]*<[ \t]*((?:https?:\/\/|www\.)[^>\s]+)[ \t]*>/g,
+    (full, lead, rawLabel, url) => toMarkdown(lead, rawLabel, url, true) ?? full
+  );
+}
+
 function htmlToText(html: string): string {
-  return html
+  const withLinks = html
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<a\s+[^>]*href\s*=\s*(["'])([\s\S]*?)\1[^>]*>([\s\S]*?)<\/a>/gi, (_full, _quote, href, inner) => {
+      const label = inner.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      const url = toSafeHttpUrl(href);
+      if (url && label) return `[${label}](${url})`;
+      return label || url || '';
+    });
+
+  return withLinks
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')

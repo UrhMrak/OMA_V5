@@ -94,25 +94,61 @@ function splitTrailingPunctuation(value: string): [string, string] {
 }
 
 function consumeEmailLinkLabel(before: string): { textBefore: string; label: string } {
-  const newlineIndex = before.lastIndexOf('\n');
-  const previousLines = newlineIndex === -1 ? '' : before.slice(0, newlineIndex + 1);
-  const sameLine = newlineIndex === -1 ? before : before.slice(newlineIndex + 1);
+  const normalized = before.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const newlineIndex = normalized.lastIndexOf('\n');
+  const previousLines = newlineIndex === -1 ? '' : normalized.slice(0, newlineIndex + 1);
+  const sameLine = newlineIndex === -1 ? normalized : normalized.slice(newlineIndex + 1);
   const trimmed = sameLine.trimEnd();
-  if (!trimmed) return { textBefore: before, label: '' };
 
-  const sentenceMatch = trimmed.match(/^(.*[.!?])(\s+)(.+)$/);
-  const label = (sentenceMatch ? sentenceMatch[3] : trimmed).trim();
-  if (!label || /^(?:https?:\/\/|www\.)/i.test(label)) {
+  if (trimmed) {
+    const sentenceMatch = trimmed.match(/^(.*[.!?])(\s+)(.+)$/);
+    const label = (sentenceMatch ? sentenceMatch[3] : trimmed).trim();
+    if (label && !/^(?:https?:\/\/|www\.)/i.test(label)) {
+      const labelOffset = sameLine.lastIndexOf(label);
+      if (labelOffset !== -1) {
+        return {
+          textBefore: previousLines + sameLine.slice(0, labelOffset),
+          label,
+        };
+      }
+    }
+  }
+
+  const withoutTrailingNl = previousLines.replace(/\n$/, '');
+  const prevNl = withoutTrailingNl.lastIndexOf('\n');
+  const prevLine = (prevNl === -1 ? withoutTrailingNl : withoutTrailingNl.slice(prevNl + 1)).trim();
+  if (!prevLine || /^(?:https?:\/\/|www\.)/i.test(prevLine) || prevLine.length > 80) {
     return { textBefore: before, label: '' };
   }
 
-  const labelOffset = sameLine.lastIndexOf(label);
-  if (labelOffset === -1) return { textBefore: before, label: '' };
-
   return {
-    textBefore: previousLines + sameLine.slice(0, labelOffset),
-    label,
+    textBefore: prevNl === -1 ? '' : `${withoutTrailingNl.slice(0, prevNl + 1)}`,
+    label: prevLine,
   };
+}
+
+function rewriteEmailAngleLinks(text: string): string {
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  const toMarkdown = (lead: string, rawLabel: string, url: string, takeLastSentence: boolean) => {
+    const trimmed = rawLabel.trim();
+    if (!trimmed || /^(?:https?:\/\/|www\.)/i.test(trimmed)) return null;
+    const sentenceMatch = takeLastSentence ? trimmed.match(/^(.*[.!?])(\s+)(.+)$/) : null;
+    const label = (sentenceMatch ? sentenceMatch[3] : trimmed).trim();
+    const prefix = sentenceMatch ? `${sentenceMatch[1]}${sentenceMatch[2]}` : '';
+    const href = toSafeHref(url);
+    if (!href || !label) return null;
+    return `${lead}${prefix}[${label}](${href})`;
+  };
+
+  const withNextLine = normalized.replace(
+    /(^|\n)([^\n<>]+)\n[ \t]*<[ \t]*((?:https?:\/\/|www\.)[^>\s]+)[ \t]*>/g,
+    (full, lead, rawLabel, url) => toMarkdown(lead, rawLabel, url, false) ?? full
+  );
+  return withNextLine.replace(
+    /(^|\n)([^\n<>]*\S)[ \t]*<[ \t]*((?:https?:\/\/|www\.)[^>\s]+)[ \t]*>/g,
+    (full, lead, rawLabel, url) => toMarkdown(lead, rawLabel, url, true) ?? full
+  );
 }
 
 function renderNewsLink(key: string, href: string, label: string) {
@@ -592,12 +628,13 @@ export default function NewsList() {
 
   function renderContent(text: string) {
     const nodes: React.ReactNode[] = [];
+    const source = rewriteEmailAngleLinks(text);
     const pattern = new RegExp(NEWS_LINK_TOKEN.source, 'gi');
     let lastIndex = 0;
     let match: RegExpExecArray | null;
     let key = 0;
 
-    while ((match = pattern.exec(text)) !== null) {
+    while ((match = pattern.exec(source)) !== null) {
       const markdownLabel = match[1];
       const markdownUrl = match[2];
       const htmlHref = match[3];
@@ -605,7 +642,7 @@ export default function NewsList() {
       const angleUrl = match[5];
       const bareUrl = match[6];
 
-      let before = text.slice(lastIndex, match.index);
+      let before = source.slice(lastIndex, match.index);
       let emailLabel = '';
       if (angleUrl) {
         const split = consumeEmailLinkLabel(before);
@@ -654,8 +691,8 @@ export default function NewsList() {
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < text.length) {
-      nodes.push(<span key={`text-${key++}`}>{text.slice(lastIndex)}</span>);
+    if (lastIndex < source.length) {
+      nodes.push(<span key={`text-${key++}`}>{source.slice(lastIndex)}</span>);
     }
 
     return nodes;
