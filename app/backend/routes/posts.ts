@@ -1,37 +1,27 @@
-import { Router } from 'express';
+import { Request, Response, Router } from 'express';
 import multer from 'multer';
-import crypto from 'crypto';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
-import {
-  contentDisposition,
-  decodeUploadFilename,
-  ensureUniqueFilename,
-  toStoredBasename,
-} from '../lib/filenames';
+import { contentDisposition, decodeUploadFilename } from '../lib/filenames';
 import { POSTS_BUCKET } from '../config';
+import {
+  ALLOWED_POST_ATTACHMENT_MIMES,
+  POSTS_TABLE,
+  PostAttachment,
+  PostFile,
+  createPost,
+  storageKey,
+  toClient,
+  uploadAttachments,
+} from '../lib/postStore';
+import { ingestNewEmails, requireEmailIngestSecret } from '../lib/emailIngest';
 
 const router = Router();
-const TABLE = 'posts';
-
-type PostAttachment = {
-  id: string;
-  name: string;
-  storedFilename: string;
-  size: number;
-  mimeType: string;
-};
-
-const allowedMimes = new Set([
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]);
 
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
-    if (!allowedMimes.has(file.mimetype)) {
+    if (!ALLOWED_POST_ATTACHMENT_MIMES.has(file.mimetype)) {
       return cb(new Error('Only PDF and Word documents are allowed'));
     }
     return cb(null, true);
@@ -58,70 +48,34 @@ function parseJsonStringArray(input: unknown): string[] {
   }
 }
 
-async function uploadAttachments(
-  postId: string,
-  files: Express.Multer.File[],
-  existingAttachments: PostAttachment[]
-): Promise<PostAttachment[]> {
-  const attachments = [...existingAttachments];
-  const usedDisplayNames = new Set(attachments.map((attachment) => attachment.name));
-  const usedStorageNames = new Set(attachments.map((attachment) => attachment.storedFilename));
-
-  for (const file of files) {
-    const displayName = ensureUniqueFilename(
-      usedDisplayNames,
-      decodeUploadFilename(file.originalname)
-    );
-    const storedFilename = ensureUniqueFilename(
-      usedStorageNames,
-      toStoredBasename(displayName) || `file-${Date.now()}`
-    );
-    const { error: uploadError } = await supabase.storage
-      .from(POSTS_BUCKET)
-      .upload(storageKey(postId, storedFilename), file.buffer, {
-        contentType: file.mimetype,
-        upsert: true,
-      });
-    if (uploadError) throw new Error(uploadError.message);
-
-    attachments.push({
-      id: crypto.randomUUID(),
-      name: displayName,
-      storedFilename,
-      size: file.size,
-      mimeType: file.mimetype,
-    });
-  }
-
-  return attachments;
-}
-
-function storageKey(postId: string, storedFilename: string): string {
-  return `${postId}/${storedFilename}`;
-}
-
-function toClient(row: any) {
-  const attachments: PostAttachment[] = row.attachments || [];
-  return {
-    id: row.id,
-    createdAtISO: row.created_at,
-    title: row.title,
-    content: row.content,
-    attachments: attachments.map((attachment) => ({
-      ...attachment,
-      downloadUrl: `/api/posts/${row.id}/attachments/${attachment.id}/download`,
-    })),
-  };
+function uploadedFiles(files: Express.Multer.File[] | undefined): PostFile[] {
+  return (files || []).map((file) => ({
+    originalname: decodeUploadFilename(file.originalname),
+    mimetype: file.mimetype,
+    size: file.size,
+    buffer: file.buffer,
+  }));
 }
 
 router.get('/', requireAuth, async (_req, res) => {
   const { data, error } = await supabase
-    .from(TABLE)
+    .from(POSTS_TABLE)
     .select('*')
     .order('created_at', { ascending: false });
   if (error) return res.status(500).send(error.message);
   res.json((data || []).map(toClient));
 });
+
+async function ingestEmailHandler(_req: Request, res: Response) {
+  const result = await ingestNewEmails();
+  if (!result.ok) {
+    return res.status(result.error === 'Email ingest is not configured' ? 503 : 500).json(result);
+  }
+  return res.json(result);
+}
+
+router.get('/ingest-email', requireEmailIngestSecret, ingestEmailHandler);
+router.post('/ingest-email', requireEmailIngestSecret, ingestEmailHandler);
 
 router.post(
   '/',
@@ -138,34 +92,17 @@ router.post(
     });
   },
   async (req, res) => {
-    const now = new Date().toISOString();
-    const postId = crypto.randomUUID();
     const title = extractTextField(req.body?.title).trim();
     const content = extractTextField(req.body?.content).trim();
-
-    const files = (req.files as Express.Multer.File[] | undefined) || [];
-    let attachments: PostAttachment[] = [];
-
-    try {
-      attachments = await uploadAttachments(postId, files, []);
-    } catch (error) {
-      return res.status(500).json({
-        error: error instanceof Error ? error.message : 'Upload failed',
-      });
-    }
-
-    const row = {
-      id: postId,
-      created_at: now,
+    const result = await createPost({
       title,
       content,
-      attachments,
-    };
-
-    const { error } = await supabase.from(TABLE).insert(row);
-    if (error) return res.status(500).json({ error: error.message });
-
-    res.json(toClient(row));
+      files: uploadedFiles(req.files as Express.Multer.File[] | undefined),
+    });
+    if (result.status !== 200) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    res.json(result.post);
   }
 );
 
@@ -186,7 +123,7 @@ router.put(
   async (req, res) => {
     const { id } = req.params;
     const { data: existing, error: selectError } = await supabase
-      .from(TABLE)
+      .from(POSTS_TABLE)
       .select('*')
       .eq('id', id)
       .maybeSingle();
@@ -213,11 +150,14 @@ router.put(
       await supabase.storage.from(POSTS_BUCKET).remove(keys);
     }
 
-    const files = (req.files as Express.Multer.File[] | undefined) || [];
     let attachments = keptAttachments;
 
     try {
-      attachments = await uploadAttachments(id, files, keptAttachments);
+      attachments = await uploadAttachments(
+        id,
+        uploadedFiles(req.files as Express.Multer.File[] | undefined),
+        keptAttachments
+      );
     } catch (error) {
       return res.status(500).json({
         error: error instanceof Error ? error.message : 'Upload failed',
@@ -232,7 +172,7 @@ router.put(
     };
 
     const { error } = await supabase
-      .from(TABLE)
+      .from(POSTS_TABLE)
       .update({ title, content, attachments })
       .eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
@@ -243,7 +183,7 @@ router.put(
 
 router.delete('/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { data: post } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle();
+  const { data: post } = await supabase.from(POSTS_TABLE).select('*').eq('id', id).maybeSingle();
 
   const attachments: PostAttachment[] = post?.attachments || [];
   if (attachments.length > 0) {
@@ -251,14 +191,14 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     await supabase.storage.from(POSTS_BUCKET).remove(keys);
   }
 
-  const { error } = await supabase.from(TABLE).delete().eq('id', id);
+  const { error } = await supabase.from(POSTS_TABLE).delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
 router.get('/:id/attachments/:attachmentId/download', requireAuth, async (req, res) => {
   const { id, attachmentId } = req.params;
-  const { data: post } = await supabase.from(TABLE).select('*').eq('id', id).maybeSingle();
+  const { data: post } = await supabase.from(POSTS_TABLE).select('*').eq('id', id).maybeSingle();
   if (!post) return res.status(404).json({ error: 'Post not found' });
 
   const attachment: PostAttachment | undefined = (post.attachments || []).find(

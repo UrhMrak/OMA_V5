@@ -1680,13 +1680,14 @@ body.modal-open {
     transition: none;
   }
 }
-.news-content-link {
+.news-content .news-content-link {
   color: var(--primary);
   text-decoration: underline;
+  cursor: pointer;
   word-break: break-word;
 }
-.news-content-link:hover,
-.news-content-link:focus {
+.news-content .news-content-link:hover,
+.news-content .news-content-link:focus {
   color: var(--primary-dark);
   outline: none;
 }

@@ -28,3 +28,17 @@ services:
         value: library
       - key: SUPABASE_POSTS_BUCKET
         value: posts
+      - key: EMAIL_IMAP_HOST
+        value: imap.gmail.com
+      - key: EMAIL_IMAP_PORT
+        value: "993"
+      - key: EMAIL_IMAP_USER
+        value: oma.iso.post@gmail.com
+      - key: EMAIL_IMAP_PASSWORD
+        sync: false
+      - key: EMAIL_ALLOWED_SENDERS
+        value: urh.mrak@gmail.com
+      - key: EMAIL_INGEST_SECRET
+        sync: false
+      - key: EMAIL_POLL_INTERVAL_MS
+        value: "120000"

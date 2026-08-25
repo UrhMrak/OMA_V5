@@ -25,6 +25,178 @@ const NEWS_TOGGLE_BTN_OVERLAP = 52;
 const COLLAPSE_TRANSITION_MS = 650;
 const SEEN_NEWS_STORAGE_PREFIX = 'oma-seen-news-posts';
 const newPostIdsThisVisitByUser = new Map<string, Set<string>>();
+const NEWS_LINK_TOKEN =
+  /\[([^\]]+)\]\(\s*<?((?:https?:\/\/|www\.)[^)\s>]+)>?(?:\s+"[^"]*")?\s*\)|<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>|((?:https?:\/\/|www\.)[^\s<]+)/gi;
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function stripHtmlTags(value: string): string {
+  return decodeHtmlEntities(value.replace(/<[^>]+>/g, ''));
+}
+
+function toSafeHref(raw: string): string | null {
+  const trimmed = decodeHtmlEntities(raw).trim();
+  if (!trimmed) return null;
+  const withProtocol = /^www\./i.test(trimmed) ? `https://${trimmed}` : trimmed;
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function extraClosingChars(value: string, open: string, close: string): number {
+  return value.split(close).length - value.split(open).length;
+}
+
+function splitTrailingPunctuation(value: string): [string, string] {
+  let url = value;
+  let trailing = '';
+
+  while (url.length > 0) {
+    const lastChar = url[url.length - 1];
+    if ('.!;:,'.includes(lastChar)) {
+      trailing = lastChar + trailing;
+      url = url.slice(0, -1);
+      continue;
+    }
+    if (lastChar === ')' && extraClosingChars(url, '(', ')') > 0) {
+      trailing = lastChar + trailing;
+      url = url.slice(0, -1);
+      continue;
+    }
+    if (lastChar === ']' && extraClosingChars(url, '[', ']') > 0) {
+      trailing = lastChar + trailing;
+      url = url.slice(0, -1);
+      continue;
+    }
+    if (lastChar === '>' && extraClosingChars(url, '<', '>') > 0) {
+      trailing = lastChar + trailing;
+      url = url.slice(0, -1);
+      continue;
+    }
+    break;
+  }
+
+  return [url, trailing];
+}
+
+function renderNewsLink(key: string, href: string, label: string) {
+  return (
+    <a
+      key={key}
+      className="news-content-link"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {label}
+    </a>
+  );
+}
+
+const HTML_BLOCK_TAGS = new Set([
+  'p', 'div', 'br', 'tr', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'blockquote', 'pre', 'table', 'thead', 'tbody', 'section', 'article',
+]);
+
+function htmlToNewsContent(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  function walk(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'script' || tag === 'style') return '';
+    if (tag === 'a') {
+      const href = toSafeHref(el.getAttribute('href') || '');
+      const label = Array.from(el.childNodes).map(walk).join('').replace(/\s+/g, ' ').trim();
+      if (href && label) return `[${label}](${href})`;
+      return label || href || '';
+    }
+    const inner = Array.from(el.childNodes).map(walk).join('');
+    if (tag === 'br') return '\n';
+    if (HTML_BLOCK_TAGS.has(tag)) return `${inner}\n`;
+    return inner;
+  }
+
+  return walk(doc.body).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function extractHtmlLinks(html: string): Array<{ label: string; href: string }> {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return [...doc.querySelectorAll('a[href]')].flatMap((anchor) => {
+    const href = toSafeHref(anchor.getAttribute('href') || '');
+    const label = (anchor.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!href || !label) return [];
+    return [{ label, href }];
+  });
+}
+
+function applyHtmlLinksToPlainText(plain: string, html: string): string | null {
+  const links = extractHtmlLinks(html);
+  if (links.length === 0) return null;
+
+  let result = plain;
+  let searchFrom = 0;
+  let applied = 0;
+  for (const { label, href } of links) {
+    const markdown = `[${label}](${href})`;
+    const alreadyAt = result.indexOf(markdown, searchFrom);
+    if (alreadyAt !== -1) {
+      searchFrom = alreadyAt + markdown.length;
+      applied += 1;
+      continue;
+    }
+    const idx = result.indexOf(label, searchFrom);
+    if (idx === -1) continue;
+    result = `${result.slice(0, idx)}${markdown}${result.slice(idx + label.length)}`;
+    searchFrom = idx + markdown.length;
+    applied += 1;
+  }
+
+  return applied > 0 ? result : null;
+}
+
+function insertTextAtCursor(
+  el: HTMLTextAreaElement,
+  current: string,
+  inserted: string,
+  setValue: (value: string) => void
+) {
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  setValue(`${current.slice(0, start)}${inserted}${current.slice(end)}`);
+}
+
+function handleNewsContentPaste(
+  event: React.ClipboardEvent<HTMLTextAreaElement>,
+  current: string,
+  setValue: (value: string) => void
+) {
+  const html = event.clipboardData.getData('text/html');
+  if (!html || !/<a\s[^>]*href/i.test(html)) return;
+
+  const plain = event.clipboardData.getData('text/plain');
+  const converted = (plain && applyHtmlLinksToPlainText(plain, html)) || htmlToNewsContent(html);
+  if (!converted) return;
+
+  event.preventDefault();
+  insertTextAtCursor(event.currentTarget, current, converted, setValue);
+}
 
 function seenNewsStorageKey(username: string) {
   return `${SEEN_NEWS_STORAGE_PREFIX}:${username}`;
@@ -57,6 +229,20 @@ function writeSeenNewsPostIds(username: string, ids: Set<string>) {
 
 function shouldCollapsePost(post: PostItem): boolean {
   return Boolean(post.content.trim()) || (post.attachments?.length ?? 0) > 0;
+}
+
+function sameNewsPosts(left: PostItem[], right: PostItem[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((post, index) => {
+    const other = right[index];
+    return (
+      post.id === other.id &&
+      post.title === other.title &&
+      post.content === other.content &&
+      post.createdAtISO === other.createdAtISO &&
+      JSON.stringify(post.attachments) === JSON.stringify(other.attachments)
+    );
+  });
 }
 
 function getTextScale(): number {
@@ -383,36 +569,75 @@ export default function NewsList() {
   }
 
   function renderContent(text: string) {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const segments = text.split(urlRegex);
-    return segments.map((segment, index) => {
-      if (segment.match(urlRegex)) {
-        return (
-          <a
-            key={`link-${index}`}
-            className="news-content-link"
-            href={segment}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {segment}
-          </a>
-        );
+    const nodes: React.ReactNode[] = [];
+    const pattern = new RegExp(NEWS_LINK_TOKEN.source, 'gi');
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let key = 0;
+
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(<span key={`text-${key++}`}>{text.slice(lastIndex, match.index)}</span>);
       }
-      return <span key={`text-${index}`}>{segment}</span>;
-    });
+
+      const markdownLabel = match[1];
+      const markdownUrl = match[2];
+      const htmlHref = match[3];
+      const htmlInner = match[4];
+      const bareUrl = match[5];
+
+      if (markdownLabel != null && markdownUrl != null) {
+        const href = toSafeHref(markdownUrl);
+        nodes.push(
+          href
+            ? renderNewsLink(`link-${key++}`, href, markdownLabel)
+            : <span key={`text-${key++}`}>{match[0]}</span>
+        );
+      } else if (htmlHref != null && htmlInner != null) {
+        const href = toSafeHref(htmlHref);
+        const label = stripHtmlTags(htmlInner) || href || match[0];
+        nodes.push(
+          href
+            ? renderNewsLink(`link-${key++}`, href, label)
+            : <span key={`text-${key++}`}>{label}</span>
+        );
+      } else if (bareUrl) {
+        const [url, trailing] = splitTrailingPunctuation(bareUrl);
+        const href = toSafeHref(url);
+        if (href) {
+          nodes.push(renderNewsLink(`link-${key++}`, href, url));
+          if (trailing) nodes.push(<span key={`text-${key++}`}>{trailing}</span>);
+        } else {
+          nodes.push(<span key={`text-${key++}`}>{match[0]}</span>);
+        }
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      nodes.push(<span key={`text-${key++}`}>{text.slice(lastIndex)}</span>);
+    }
+
+    return nodes;
   }
 
   async function refresh() {
     try {
       const data = await api.get<PostItem[]>('/api/posts');
-      setPosts(data);
+      setPosts((prev) => (sameNewsPosts(prev, data) ? prev : data));
     } finally {
       setLoaded(true);
     }
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    const intervalId = window.setInterval(() => {
+      refresh();
+    }, 30_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     seenNewsIdsRef.current = null;
@@ -691,6 +916,7 @@ export default function NewsList() {
               placeholder={t('news.contentPlaceholder')}
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onPaste={(e) => handleNewsContentPaste(e, content, setContent)}
             />
             <input
               ref={fileInputRef}
@@ -757,6 +983,7 @@ export default function NewsList() {
                   placeholder={t('news.contentPlaceholder')}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
+                  onPaste={(e) => handleNewsContentPaste(e, editContent, setEditContent)}
                 />
                 {renderEditAttachments(p)}
               </div>

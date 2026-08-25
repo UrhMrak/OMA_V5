@@ -11,10 +11,19 @@ create table if not exists public.posts (
   created_at timestamptz not null default now(),
   title text not null default '',
   content text not null default '',
-  attachments jsonb not null default '[]'::jsonb
+  attachments jsonb not null default '[]'::jsonb,
+  source_message_id text
 );
 
 create index if not exists posts_created_at_idx on public.posts (created_at desc);
+
+-- Existing installs: add the column if the table predates it.
+alter table public.posts add column if not exists source_message_id text;
+
+-- Dedup emails without blocking manual posts (those have a null source_message_id).
+create unique index if not exists posts_source_message_id_idx
+  on public.posts (source_message_id)
+  where source_message_id is not null;
 
 -- Calendar events (free-form fields stored in `data`)
 create table if not exists public.events (
