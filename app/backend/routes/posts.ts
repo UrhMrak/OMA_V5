@@ -14,9 +14,22 @@ import {
   toClient,
   uploadAttachments,
 } from '../lib/postStore';
-import { ingestNewEmails, requireEmailIngestSecret } from '../lib/emailIngest';
+import { extractPostBody, ingestNewEmails, requireEmailIngestSecret } from '../lib/emailIngest';
 
 const router = Router();
+
+function toPublicPost(row: {
+  id: string;
+  created_at: string;
+  title: string;
+  content: string;
+  attachments?: PostAttachment[];
+  source_message_id?: string | null;
+}) {
+  const post = toClient(row);
+  if (!row.source_message_id) return post;
+  return { ...post, content: extractPostBody(post.content) };
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -63,7 +76,7 @@ router.get('/', requireAuth, async (_req, res) => {
     .select('*')
     .order('created_at', { ascending: false });
   if (error) return res.status(500).send(error.message);
-  res.json((data || []).map(toClient));
+  res.json((data || []).map(toPublicPost));
 });
 
 async function ingestEmailHandler(_req: Request, res: Response) {
@@ -177,7 +190,7 @@ router.put(
       .eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
 
-    res.json(toClient(row));
+    res.json(toPublicPost(row));
   }
 );
 
