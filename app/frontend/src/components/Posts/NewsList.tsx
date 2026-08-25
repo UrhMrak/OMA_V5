@@ -26,7 +26,7 @@ const COLLAPSE_TRANSITION_MS = 650;
 const SEEN_NEWS_STORAGE_PREFIX = 'oma-seen-news-posts';
 const newPostIdsThisVisitByUser = new Map<string, Set<string>>();
 const NEWS_LINK_TOKEN =
-  /\[([^\]]+)\]\(\s*<?((?:https?:\/\/|www\.)[^)\s>]+)>?(?:\s+"[^"]*")?\s*\)|<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>|((?:https?:\/\/|www\.)[^\s<]+)/gi;
+  /\[([^\]]+)\]\(\s*<?((?:https?:\/\/|www\.)[^)\s>]+)>?(?:\s+"[^"]*")?\s*\)|<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>|<((?:https?:\/\/|www\.)[^>\s]+)>|((?:https?:\/\/|www\.)[^\s<]+)/gi;
 
 function decodeHtmlEntities(value: string): string {
   return value
@@ -91,6 +91,28 @@ function splitTrailingPunctuation(value: string): [string, string] {
   }
 
   return [url, trailing];
+}
+
+function consumeEmailLinkLabel(before: string): { textBefore: string; label: string } {
+  const newlineIndex = before.lastIndexOf('\n');
+  const previousLines = newlineIndex === -1 ? '' : before.slice(0, newlineIndex + 1);
+  const sameLine = newlineIndex === -1 ? before : before.slice(newlineIndex + 1);
+  const trimmed = sameLine.trimEnd();
+  if (!trimmed) return { textBefore: before, label: '' };
+
+  const sentenceMatch = trimmed.match(/^(.*[.!?])(\s+)(.+)$/);
+  const label = (sentenceMatch ? sentenceMatch[3] : trimmed).trim();
+  if (!label || /^(?:https?:\/\/|www\.)/i.test(label)) {
+    return { textBefore: before, label: '' };
+  }
+
+  const labelOffset = sameLine.lastIndexOf(label);
+  if (labelOffset === -1) return { textBefore: before, label: '' };
+
+  return {
+    textBefore: previousLines + sameLine.slice(0, labelOffset),
+    label,
+  };
 }
 
 function renderNewsLink(key: string, href: string, label: string) {
@@ -576,15 +598,24 @@ export default function NewsList() {
     let key = 0;
 
     while ((match = pattern.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        nodes.push(<span key={`text-${key++}`}>{text.slice(lastIndex, match.index)}</span>);
-      }
-
       const markdownLabel = match[1];
       const markdownUrl = match[2];
       const htmlHref = match[3];
       const htmlInner = match[4];
-      const bareUrl = match[5];
+      const angleUrl = match[5];
+      const bareUrl = match[6];
+
+      let before = text.slice(lastIndex, match.index);
+      let emailLabel = '';
+      if (angleUrl) {
+        const split = consumeEmailLinkLabel(before);
+        before = split.textBefore;
+        emailLabel = split.label;
+      }
+
+      if (before) {
+        nodes.push(<span key={`text-${key++}`}>{before}</span>);
+      }
 
       if (markdownLabel != null && markdownUrl != null) {
         const href = toSafeHref(markdownUrl);
@@ -600,6 +631,14 @@ export default function NewsList() {
           href
             ? renderNewsLink(`link-${key++}`, href, label)
             : <span key={`text-${key++}`}>{label}</span>
+        );
+      } else if (angleUrl) {
+        const href = toSafeHref(angleUrl);
+        const label = emailLabel || angleUrl;
+        nodes.push(
+          href
+            ? renderNewsLink(`link-${key++}`, href, label)
+            : <span key={`text-${key++}`}>{emailLabel ? `${emailLabel} ${match[0]}` : match[0]}</span>
         );
       } else if (bareUrl) {
         const [url, trailing] = splitTrailingPunctuation(bareUrl);
