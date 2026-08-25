@@ -23,7 +23,8 @@ export type EmailIngestResult = {
 };
 
 const EMPTY_SUBJECT_TITLE = '(No subject)';
-const CONTENT_CUTOFF = /^[ \t]*---[ \t]*\r?$/m;
+const CONTENT_CUTOFF_LINE =
+  /^(?:oma[ \t-]*cut|-[ \t]+-|-{2,}|_{3,}|={3,}|[–—−─━═-]{2,}|[–—−])$/i;
 
 // Node prefers IPv6; Gmail's IMAP IPv6 path often hangs until timeout.
 dns.setDefaultResultOrder('ipv4first');
@@ -35,9 +36,19 @@ export function isEmailIngestConfigured(): boolean {
 }
 
 export function extractPostBody(text: string): string {
-  const match = CONTENT_CUTOFF.exec(text);
-  const body = match ? text.slice(0, match.index) : text;
+  const cutoffAt = findContentCutoffIndex(text);
+  const body = cutoffAt >= 0 ? text.slice(0, cutoffAt) : text;
   return body.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function findContentCutoffIndex(text: string): number {
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  let offset = 0;
+  for (const line of normalized.split('\n')) {
+    if (CONTENT_CUTOFF_LINE.test(line.trim())) return offset;
+    offset += line.length + 1;
+  }
+  return -1;
 }
 
 export function requireEmailIngestSecret(req: Request, res: Response, next: NextFunction) {
@@ -267,6 +278,11 @@ function htmlToText(html: string): string {
   const withLinks = html
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<hr\b[^>]*>/gi, '\nOMA CUT\n')
+    .replace(
+      /<(div|p)[^>]*style=(["'])[^>]*\bborder-(?:top|bottom)\b[^>]*\2[^>]*>\s*(?:<br\s*\/?>)?\s*<\/\1>/gi,
+      '\nOMA CUT\n'
+    )
     .replace(/<a\s+[^>]*href\s*=\s*(["'])([\s\S]*?)\1[^>]*>([\s\S]*?)<\/a>/gi, (_full, _quote, href, inner) => {
       const label = inner.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
       const url = toSafeHttpUrl(href);
