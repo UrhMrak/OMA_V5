@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import dns from 'dns';
+import { promises as dnsPromises } from 'dns';
 import { NextFunction, Request, Response } from 'express';
 import { ImapFlow } from 'imapflow';
 import { AddressObject, simpleParser } from 'mailparser';
@@ -67,6 +68,37 @@ export async function ingestNewEmails(): Promise<EmailIngestResult> {
   return ingestInFlight;
 }
 
+async function resolveImapHost(hostname: string): Promise<{ host: string; servername?: string }> {
+  try {
+    const { address } = await dnsPromises.lookup(hostname, { family: 4 });
+    return { host: address, servername: hostname };
+  } catch {
+    return { host: hostname };
+  }
+}
+
+async function downloadUidSource(client: ImapFlow, uid: number): Promise<Buffer | undefined> {
+  const downloaded = await client.download(uid, undefined, { uid: true });
+  const chunks: Buffer[] = [];
+  for await (const chunk of downloaded.content) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  if (chunks.length === 0) return undefined;
+  return Buffer.concat(chunks);
+}
+
+async function closeImap(client: ImapFlow) {
+  try {
+    await client.logout();
+  } catch {
+    try {
+      client.close();
+    } catch {
+      // Ignore close failures after a failed logout.
+    }
+  }
+}
+
 async function runIngest(): Promise<EmailIngestResult> {
   if (!isEmailIngestConfigured()) {
     return {
@@ -79,19 +111,25 @@ async function runIngest(): Promise<EmailIngestResult> {
   }
 
   dns.setDefaultResultOrder('ipv4first');
+  const resolved = await resolveImapHost(EMAIL_IMAP_HOST);
 
   const client = new ImapFlow({
-    host: EMAIL_IMAP_HOST,
+    host: resolved.host,
     port: EMAIL_IMAP_PORT,
     secure: true,
     logger: false,
     connectionTimeout: 20000,
     greetingTimeout: 20000,
-    socketTimeout: 30000,
+    tls: resolved.servername ? { servername: resolved.servername } : undefined,
     auth: {
       user: EMAIL_IMAP_USER,
       pass: EMAIL_IMAP_PASSWORD,
     },
+  });
+
+  client.on('error', (error) => {
+    // eslint-disable-next-line no-console
+    console.error('IMAP connection error', error instanceof Error ? error.message : error);
   });
 
   let created = 0;
@@ -102,14 +140,11 @@ async function runIngest(): Promise<EmailIngestResult> {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      for await (const message of client.fetch(
-        { seen: false },
-        { uid: true, source: true, envelope: true }
-      )) {
+      const uids = (await client.search({ seen: false }, { uid: true })) || [];
+      for (const uid of uids) {
         processed += 1;
-        const uid = message.uid;
         try {
-          const source = message.source ? Buffer.from(message.source) : undefined;
+          const source = await downloadUidSource(client, uid);
           const outcome = await processMessageSource(source);
           if (outcome === 'created') created += 1;
           else skipped += 1;
@@ -123,13 +158,9 @@ async function runIngest(): Promise<EmailIngestResult> {
     } finally {
       lock.release();
     }
-    await client.logout();
+    await closeImap(client);
   } catch (error) {
-    try {
-      await client.logout();
-    } catch {
-      // Ignore logout failures after a connect/fetch error.
-    }
+    await closeImap(client);
     return {
       ok: false,
       created,
