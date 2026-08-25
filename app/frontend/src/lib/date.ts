@@ -112,19 +112,40 @@ export function isSameLocalDay(iso: string | null | undefined, reference: Date):
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+function getEventWallRange(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined
+): { start: Date; end: Date } | null {
+  const start = isoToWallDate(startISO);
+  if (Number.isNaN(start.getTime())) return null;
+
+  const end = endISO ? isoToWallDate(endISO) : start;
+  if (Number.isNaN(end.getTime())) return null;
+
+  return { start, end };
+}
+
 export function isEventInPulseWindow(
   startISO: string | null | undefined,
   endISO: string | null | undefined,
   now: Date = new Date()
 ): boolean {
-  const start = isoToWallDate(startISO);
-  if (Number.isNaN(start.getTime())) return false;
-
-  const end = endISO ? isoToWallDate(endISO) : start;
-  if (Number.isNaN(end.getTime())) return false;
+  const range = getEventWallRange(startISO, endISO);
+  if (!range) return false;
 
   const nowMs = now.getTime();
-  return nowMs >= start.getTime() - ONE_HOUR_MS && nowMs <= end.getTime();
+  return nowMs >= range.start.getTime() - ONE_HOUR_MS && nowMs <= range.end.getTime();
+}
+
+export function isEventFinished(
+  startISO: string | null | undefined,
+  endISO: string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  const range = getEventWallRange(startISO, endISO);
+  if (!range) return false;
+
+  return now.getTime() >= range.end.getTime();
 }
 
 function getISOWeekContext(date: Date) {

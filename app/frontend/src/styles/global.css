@@ -507,6 +507,12 @@ body {
 .dashboard-grid .skeleton-card {
   background: var(--surface);
 }
+.dashboard-grid .card-list > .card {
+  transition: opacity 0.4s ease;
+}
+.dashboard-grid .card-list > .card.card--past {
+  opacity: 0.55;
+}
 .card {
   background: var(--card);
   border: 1px solid var(--border);

@@ -1,7 +1,7 @@
 import NewsList from '../components/Posts/NewsList';
 import { useEffect, useMemo, useState } from 'react';
 import { EventItem } from '../lib/types';
-import { isSameLocalDay, formatWallTime, isEventInPulseWindow } from '../lib/date';
+import { isSameLocalDay, formatWallTime, isEventInPulseWindow, isEventFinished } from '../lib/date';
 import { useEvents } from '../context/EventsContext';
 import { useLanguage } from '../context/LanguageContext';
 import EventModal from '../components/Calendar/EventModal';
@@ -54,45 +54,49 @@ export default function Dashboard() {
   const renderEventList = (
     items: EventItem[],
     emptyMessage: string,
-    pulseWhenActive = false
+    pulseWhenActive = false,
+    fadeWhenFinished = false
   ) => {
     if (!loaded) return <SkeletonCardList count={2} />;
     if (items.length === 0) return <p className="muted">{emptyMessage}</p>;
     return (
       <ul className="card-list">
-        {items.map((e) => (
-          <li
-            key={e.id}
-            className="card"
-            role="button"
-            tabIndex={0}
-            style={{ cursor: 'pointer' }}
-            onClick={() => setSelectedEvent(e)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                setSelectedEvent(e);
-              }
-            }}
-          >
-            <div className="row" style={{ alignItems: 'center', gap: 6 }}>
-              <div
-                className={`event-color${pulseWhenActive && isEventInPulseWindow(e.dateISO, e.endDateISO, now) ? ' event-color--pulse' : ''}`}
-                style={{ background: e.color }}
-              />
-              <span className="muted small">{formatEventTimeRange(e.dateISO, e.endDateISO)}</span>
-            </div>
-            <div>
-              <div className="card-title">{e.title}</div>
-              {e.activity?.trim() && (
-                <div className="dashboard-event-activity">{e.activity.trim()}</div>
-              )}
-              {e.venue?.trim() && (
-                <div className="muted small dashboard-event-venue">{e.venue.trim()}</div>
-              )}
-            </div>
-          </li>
-        ))}
+        {items.map((e) => {
+          const isFinished = fadeWhenFinished && isEventFinished(e.dateISO, e.endDateISO, now);
+          return (
+            <li
+              key={e.id}
+              className={`card${isFinished ? ' card--past' : ''}`}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setSelectedEvent(e)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setSelectedEvent(e);
+                }
+              }}
+            >
+              <div className="row" style={{ alignItems: 'center', gap: 6 }}>
+                <div
+                  className={`event-color${pulseWhenActive && !isFinished && isEventInPulseWindow(e.dateISO, e.endDateISO, now) ? ' event-color--pulse' : ''}`}
+                  style={{ background: e.color }}
+                />
+                <span className="muted small">{formatEventTimeRange(e.dateISO, e.endDateISO)}</span>
+              </div>
+              <div>
+                <div className="card-title">{e.title}</div>
+                {e.activity?.trim() && (
+                  <div className="dashboard-event-activity">{e.activity.trim()}</div>
+                )}
+                {e.venue?.trim() && (
+                  <div className="muted small dashboard-event-venue">{e.venue.trim()}</div>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     );
   };
@@ -105,7 +109,7 @@ export default function Dashboard() {
       </section>
       <section className="dashboard-events">
         <h2 className="h2 dashboard-section-title">{t('dashboard.todayEvents')}</h2>
-        {renderEventList(todayEvents, t('dashboard.noToday'), true)}
+        {renderEventList(todayEvents, t('dashboard.noToday'), true, true)}
         <h2 className="h2 dashboard-section-title dashboard-events-next-title">{t('dashboard.tomorrowEvents')}</h2>
         {renderEventList(tomorrowEvents, t('dashboard.noTomorrow'))}
       </section>
