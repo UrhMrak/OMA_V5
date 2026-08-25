@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import dns from 'dns';
 import { NextFunction, Request, Response } from 'express';
 import { ImapFlow } from 'imapflow';
 import { AddressObject, simpleParser } from 'mailparser';
@@ -22,6 +23,9 @@ export type EmailIngestResult = {
 
 const EMPTY_SUBJECT_TITLE = '(No subject)';
 const CONTENT_CUTOFF = /^[ \t]*---[ \t]*\r?$/m;
+
+// Node prefers IPv6; Gmail's IMAP IPv6 path often hangs until timeout.
+dns.setDefaultResultOrder('ipv4first');
 
 let ingestInFlight: Promise<EmailIngestResult> | null = null;
 
@@ -74,11 +78,16 @@ async function runIngest(): Promise<EmailIngestResult> {
     };
   }
 
+  dns.setDefaultResultOrder('ipv4first');
+
   const client = new ImapFlow({
     host: EMAIL_IMAP_HOST,
     port: EMAIL_IMAP_PORT,
     secure: true,
     logger: false,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
     auth: {
       user: EMAIL_IMAP_USER,
       pass: EMAIL_IMAP_PASSWORD,

@@ -48,7 +48,7 @@ export const POSTS_BUCKET = process.env.SUPABASE_POSTS_BUCKET || 'posts';
 export const EMAIL_IMAP_HOST = process.env.EMAIL_IMAP_HOST || 'imap.gmail.com';
 export const EMAIL_IMAP_PORT = Number(process.env.EMAIL_IMAP_PORT || 993);
 export const EMAIL_IMAP_USER = process.env.EMAIL_IMAP_USER || 'oma.iso.post@gmail.com';
-export const EMAIL_IMAP_PASSWORD = process.env.EMAIL_IMAP_PASSWORD || '';
+export const EMAIL_IMAP_PASSWORD = (process.env.EMAIL_IMAP_PASSWORD || '').replace(/\s+/g, '');
 export const EMAIL_ALLOWED_SENDERS = (process.env.EMAIL_ALLOWED_SENDERS || 'urh.mrak@gmail.com')
   .split(',')
   .map((address) => address.trim().toLowerCase())
