@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { EventItem, ProgramRow } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
 import { useEvents } from '../../context/EventsContext';
+import { useCatalog } from '../../context/CatalogContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { api } from '../../lib/api';
 import {
@@ -130,6 +131,7 @@ export default function EventModal({
 }) {
   const { role } = useAuth();
   const { events, loadEvents } = useEvents();
+  const { works: catalogWorks } = useCatalog();
   const { t, locale } = useLanguage();
   const navigate = useNavigate();
   const isAdmin = role === 'admin';
@@ -561,7 +563,12 @@ export default function EventModal({
     return (
       <div className="row-gap tight event-detail-field">
         <label className="label">{t('event.program')}</label>
-        <ProgramTable rows={programRows} onChange={setProgramRows} readOnly={readOnly} />
+        <ProgramTable
+          rows={programRows}
+          onChange={setProgramRows}
+          readOnly={readOnly}
+          catalog={isAdmin ? catalogWorks : undefined}
+        />
       </div>
     );
   }

@@ -4,7 +4,6 @@ dns.setDefaultResultOrder('ipv4first');
 
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
 import {
   EMAIL_POLL_INTERVAL_MS,
   FRONTEND_ORIGINS,
@@ -17,40 +16,9 @@ import authRoutes from './routes/auth';
 import postsRoutes from './routes/posts';
 import eventsRoutes from './routes/events';
 import libraryRoutes from './routes/library';
+import catalogRoutes from './routes/catalog';
 
 const app = express();
-const DEBUG_LOG_PATH = '/Users/urhmrak/Desktop/Web-Dev/OMA_V5/.cursor/debug-752d8c.log';
-
-function debugLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown>) {
-  // #region agent log
-  try {
-    const entry = JSON.stringify({
-      sessionId: '752d8c',
-      runId: 'pre-fix',
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    });
-    fs.appendFileSync(DEBUG_LOG_PATH, `${entry}\n`);
-  } catch {
-    // Ignore logging failures outside local debug runs.
-  }
-  // #endregion
-}
-
-app.use((req, _res, next) => {
-  if (req.path.startsWith('/api/auth/login')) {
-    debugLog('A', 'server.ts:cors-check', 'auth login request', {
-      requestOrigin: req.headers.origin || null,
-      allowedOrigins: FRONTEND_ORIGINS,
-      rejectedOrigins: FRONTEND_ORIGINS_REJECTED,
-      rawFrontendOrigin: FRONTEND_ORIGIN_RAW,
-    });
-  }
-  next();
-});
 
 app.use(
   cors({
@@ -66,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/library', libraryRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({

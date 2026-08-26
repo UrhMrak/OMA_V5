@@ -39,77 +39,19 @@ async function request<T>(method: Method, url: string, body?: any, headers?: Rec
   }
 
   const resolvedUrl = resolveUrl(url);
-  // #region agent log
-  fetch('http://127.0.0.1:7623/ingest/303c8905-ce82-429e-a986-cc58ecdbb6ee', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '752d8c' },
-    body: JSON.stringify({
-      sessionId: '752d8c',
-      runId: 'pre-fix',
-      hypothesisId: 'B',
-      location: 'api.ts:request:start',
-      message: 'API request start',
-      data: { method, url, resolvedUrl, apiBase: API_BASE },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
-  try {
-    const res = await fetch(resolvedUrl, {
-      method,
-      headers: requestHeaders,
-      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
-    });
-    // #region agent log
-    fetch('http://127.0.0.1:7623/ingest/303c8905-ce82-429e-a986-cc58ecdbb6ee', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '752d8c' },
-      body: JSON.stringify({
-        sessionId: '752d8c',
-        runId: 'pre-fix',
-        hypothesisId: 'E',
-        location: 'api.ts:request:response',
-        message: 'API response received',
-        data: {
-          resolvedUrl,
-          status: res.status,
-          ok: res.ok,
-          corsHeader: res.headers.get('access-control-allow-origin'),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || res.statusText);
-    }
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('application/json')) return (await res.json()) as T;
-    return (await res.text()) as unknown as T;
-  } catch (err: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7623/ingest/303c8905-ce82-429e-a986-cc58ecdbb6ee', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '752d8c' },
-      body: JSON.stringify({
-        sessionId: '752d8c',
-        runId: 'pre-fix',
-        hypothesisId: 'B',
-        location: 'api.ts:request:error',
-        message: 'API request failed',
-        data: {
-          resolvedUrl,
-          errorName: err?.name || 'Error',
-          errorMessage: err?.message || String(err),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    throw err;
+  const res = await fetch(resolvedUrl, {
+    method,
+    headers: requestHeaders,
+    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || res.statusText);
   }
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) return (await res.json()) as T;
+  return (await res.text()) as unknown as T;
 }
 
 export type UploadProgressHandler = (percent: number) => void;

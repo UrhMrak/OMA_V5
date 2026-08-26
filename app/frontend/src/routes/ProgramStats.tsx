@@ -3,6 +3,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { ProgramRow } from '../lib/types';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
+import { useCatalog } from '../context/CatalogContext';
 import { useLanguage } from '../context/LanguageContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
@@ -23,6 +24,7 @@ import {
 
 export default function ProgramStats() {
   const { events, loaded, loadEvents } = useEvents();
+  const { works: catalogWorks } = useCatalog();
   const { role } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
@@ -222,7 +224,12 @@ export default function ProgramStats() {
 
           {isAdmin && <p className="muted small">{t('programPage.sharedHint')}</p>}
 
-          <ProgramTable rows={rows} onChange={isAdmin ? setRows : undefined} readOnly={!isAdmin} />
+          <ProgramTable
+            rows={rows}
+            onChange={isAdmin ? setRows : undefined}
+            readOnly={!isAdmin}
+            catalog={isAdmin ? catalogWorks : undefined}
+          />
 
           {!isAdmin && rows.length === 0 && <p className="muted">{t('programPage.emptyProgram')}</p>}
           {error && <p className="error">{error}</p>}

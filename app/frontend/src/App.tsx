@@ -1,9 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { EventsProvider } from './context/EventsContext';
+import { CatalogProvider } from './context/CatalogContext';
 import Dashboard from './routes/Dashboard';
 import CalendarPage from './routes/Calendar';
 import Library from './routes/Library';
+import MusicCatalog from './routes/MusicCatalog';
 import Stats from './routes/Stats';
 import ProgramStats from './routes/ProgramStats';
 import Stage from './routes/Stage';
@@ -14,6 +16,12 @@ import TopNav from './components/Layout/TopNav';
 import Footer from './components/Layout/Footer';
 import PageTransition from './components/Layout/PageTransition';
 import { useTextSize } from './context/TextSizeContext';
+
+function AdminRoute({ children }: { children: React.ReactElement }) {
+  const { role } = useAuth();
+  if (role !== 'admin') return <Navigate to="/" replace />;
+  return children;
+}
 
 function Layout() {
   const { textSize } = useTextSize();
@@ -28,6 +36,14 @@ function Layout() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/library" element={<Library />} />
+              <Route
+                path="/catalog"
+                element={
+                  <AdminRoute>
+                    <MusicCatalog />
+                  </AdminRoute>
+                }
+              />
               <Route path="/stats" element={<Stats />} />
               <Route path="/stats/program" element={<ProgramStats />} />
               <Route path="/stage" element={<Stage />} />
@@ -52,10 +68,12 @@ export default function App() {
   return (
     <AuthProvider>
       <EventsProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/*" element={<ProtectedApp />} />
-        </Routes>
+        <CatalogProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/*" element={<ProtectedApp />} />
+          </Routes>
+        </CatalogProvider>
       </EventsProvider>
     </AuthProvider>
   );

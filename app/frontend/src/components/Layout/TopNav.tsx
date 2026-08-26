@@ -25,7 +25,7 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
 }
 
 export default function TopNav() {
-  const { username, clearSession } = useAuth();
+  const { username, role, clearSession } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,6 +103,7 @@ export default function TopNav() {
             <NavLink to="/" end>{t('nav.home')}</NavLink>
             <NavLink to="/calendar">{t('nav.calendar')}</NavLink>
             <NavLink to="/library">{t('nav.library')}</NavLink>
+            {role === 'admin' && <NavLink to="/catalog">{t('nav.catalog')}</NavLink>}
             <NavLink to="/stage">{t('nav.stage')}</NavLink>
             <div className="nav-dropdown" ref={statsMenuRef}>
               <button

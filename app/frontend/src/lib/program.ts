@@ -64,13 +64,15 @@ export function sumProgramLengths(rows: ProgramRow[]): string | null {
 }
 
 function normalizeProgramRow(row: Partial<ProgramRow>): ProgramRow {
-  return {
+  const normalized: ProgramRow = {
     id: row.id || createRowId(),
     composer: row.composer || '',
     title: row.title || '',
     instrumentation: row.instrumentation || '',
     length: row.length || '',
   };
+  if (row.catalogWorkId) normalized.catalogWorkId = row.catalogWorkId;
+  return normalized;
 }
 
 export function normalizeProgramRows(rows: unknown): ProgramRow[] {
