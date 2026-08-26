@@ -767,15 +767,6 @@ export default function FolderTree({
 
   useEffect(() => () => revokeObjectUrl(), []);
 
-  useEffect(() => {
-    if (!viewer) {
-      document.body.classList.remove('modal-open');
-      return;
-    }
-    document.body.classList.add('modal-open');
-    return () => document.body.classList.remove('modal-open');
-  }, [viewer]);
-
   async function fetchFileBlob(file: LibraryNode): Promise<Blob> {
     if (!file.path) {
       throw new Error(t('library.filePathMissing'));

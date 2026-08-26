@@ -554,15 +554,6 @@ export default function NewsList() {
 
   useEffect(() => () => revokeObjectUrl(), []);
 
-  useEffect(() => {
-    if (!viewer) {
-      document.body.classList.remove('modal-open');
-      return;
-    }
-    document.body.classList.add('modal-open');
-    return () => document.body.classList.remove('modal-open');
-  }, [viewer]);
-
   async function fetchAttachmentBlob(attachment: PostAttachment): Promise<Blob> {
     const response = await fetch(`${API_BASE}${attachment.downloadUrl}`, {
       headers: authHeaders(),

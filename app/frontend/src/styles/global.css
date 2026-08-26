@@ -1000,6 +1000,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overscroll-behavior: none;
   animation: modalBackdropEnter 0.2s ease-out;
 }
 .modal-backdrop.closing {
@@ -1070,6 +1071,7 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   margin-top: 12px;
   margin-bottom: 12px;
 }
@@ -1115,8 +1117,10 @@ body {
 }
 
 /* Prevent background scroll when modal is open */
+html.modal-open,
 body.modal-open {
   overflow: hidden;
+  overscroll-behavior: none;
 }
 @media (max-width: 480px) {
   .modal .event-detail-field .input,
@@ -1763,6 +1767,7 @@ body.modal-open {
   margin-top: 12px;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   min-height: 0;

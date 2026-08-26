@@ -158,14 +158,6 @@ export default function EventModal({
     loadedProgramProjectIdRef.current = null;
   }, [event, draft]);
 
-  // Lock background scroll while modal is open
-  useEffect(() => {
-    document.body.classList.add('modal-open');
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, []);
-
   const displayedProjectId = useMemo(() => {
     if (form.projectIdOverridden) return form.projectId || '';
     return computeAutoProjectId(form, events, {
