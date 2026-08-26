@@ -353,6 +353,16 @@ body {
   font-weight: 500;
   pointer-events: none;
 }
+.event-modal-actions {
+  margin-top: 16px;
+}
+.event-modal-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
 .event-heading-project-id {
   font-weight: 400;
   font-size: 12px;
@@ -1125,6 +1135,17 @@ body.modal-open {
   }
   .modal .date-range-row {
     flex-wrap: nowrap;
+  }
+  .event-modal-actions {
+    gap: 8px;
+  }
+  .event-modal-action-buttons {
+    gap: 6px;
+  }
+  .event-modal-actions .btn {
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
   }
 }
 .tree {
@@ -2551,6 +2572,12 @@ main.container .label {
 
 main.container .btn {
   font-size: calc(14px * var(--text-scale));
+}
+
+@media (max-width: 520px) {
+  main.container .event-modal-actions .btn {
+    font-size: calc(12px * var(--text-scale));
+  }
 }
 
 main.container .dashboard-event-activity {

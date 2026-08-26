@@ -662,7 +662,7 @@ export default function EventModal({
             </div>
           </div>
         </div>
-        <div className="row-between" style={{ marginTop: 16 }}>
+        <div className="row-between event-modal-actions">
           {role === 'admin' && !isCreating ? (
             <button
               type="button"
@@ -683,7 +683,7 @@ export default function EventModal({
           ) : (
             <div />
           )}
-          <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+          <div className="event-modal-action-buttons">
             {!isCreating && (
               <button
                 type="button"
@@ -701,7 +701,7 @@ export default function EventModal({
                 {t('event.openStage')}
               </button>
             )}
-            {!isCreating && event && (
+            {!isAdmin && !isCreating && event && (
               <button className="btn" onClick={() => downloadICS(event)}>
                 {t('event.addToCalendar')}
               </button>
