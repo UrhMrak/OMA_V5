@@ -191,6 +191,19 @@ export function withDefaultInstruments(chart: SeatingChart): SeatingChart {
   return { sections };
 }
 
+export function cloneSeatingChart(chart: SeatingChart): SeatingChart {
+  return {
+    sections: chart.sections.map((section) => ({
+      ...createSeatingSection(section.instrument, {
+        customLabel: section.customLabel,
+        sharesStands: section.sharesStands,
+      }),
+      players: section.players.map((player) => createSeatingPlayer(player.name)),
+      covers: section.covers.map((player) => createSeatingPlayer(player.name)),
+    })),
+  };
+}
+
 export function isPlayerNamed(player: SeatingPlayer): boolean {
   return player.name.trim().length > 0;
 }

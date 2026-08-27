@@ -22,6 +22,7 @@ import {
   createWeek34MenningarnottSeatingChart,
   createWeek34SeatingChart,
   createWeek35SeatingChart,
+  cloneSeatingChart,
   emptySeatingChart,
   findConductorForProject,
   findSeatingForProject,
@@ -49,6 +50,7 @@ export default function Stage() {
   );
   const [chart, setChart] = useState<SeatingChartData>(emptySeatingChart);
   const [addInstrumentKey, setAddInstrumentKey] = useState('');
+  const [copyFromProjectId, setCopyFromProjectId] = useState('');
   const [customLabel, setCustomLabel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
@@ -67,6 +69,14 @@ export default function Stage() {
   const availableInstruments = INSTRUMENT_CATALOG.filter(
     (entry) => !chart.sections.some((section) => section.instrument === entry.key)
   );
+  const copySourceOptions = useMemo(() => {
+    const selected = projectOptions.find((option) => option.projectId === selectedProjectId);
+    return projectOptions.filter((option) => {
+      if (option.projectId === selectedProjectId) return false;
+      if (selected && option.latestDateISO >= selected.earliestDateISO) return false;
+      return seatingHasNamedPlayers(resolveSeatingForProject(events, option.projectId, option));
+    });
+  }, [projectOptions, selectedProjectId, events]);
 
   useEffect(() => {
     if (location.pathname === '/stage') {
@@ -94,6 +104,7 @@ export default function Stage() {
     setError('');
     setSavedMessage('');
     setAddInstrumentKey('');
+    setCopyFromProjectId('');
     setCustomLabel('');
   }, [loaded, selectedProjectId, events, projectOptions, isAdmin]);
 
@@ -150,6 +161,26 @@ export default function Stage() {
     });
     setAddInstrumentKey('');
     setCustomLabel('');
+  }
+
+  function enterDataFrom() {
+    if (!copyFromProjectId || copyFromProjectId === selectedProjectId) return;
+    const option = projectOptions.find((entry) => entry.projectId === copyFromProjectId);
+    const source = resolveSeatingForProject(events, copyFromProjectId, option);
+    if (!seatingHasNamedPlayers(source)) {
+      setError(t('stagePage.copyFromEmpty'));
+      setSavedMessage('');
+      return;
+    }
+
+    setChart(withDefaultInstruments(cloneSeatingChart(source)));
+    setCopyFromProjectId('');
+    setError('');
+    setSavedMessage(
+      t('stagePage.copiedFrom', {
+        project: formatProjectLabel(copyFromProjectId, option?.title || ''),
+      })
+    );
   }
 
   async function saveSeating() {
@@ -318,6 +349,33 @@ export default function Stage() {
           </div>
 
           {isAdmin && <p className="muted small">{t('stagePage.sharedHint')}</p>}
+
+          {isAdmin && (
+            <div className="stage-add-instrument">
+              <select
+                className="input"
+                value={copyFromProjectId}
+                onChange={(e) => setCopyFromProjectId(e.target.value)}
+                aria-label={t('stagePage.enterDataFrom')}
+                disabled={copySourceOptions.length === 0}
+              >
+                <option value="">{t('stagePage.selectPastProject')}</option>
+                {copySourceOptions.map((option) => (
+                  <option key={option.projectId} value={option.projectId}>
+                    {formatProjectLabel(option.projectId, option.title)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn"
+                onClick={enterDataFrom}
+                disabled={!copyFromProjectId}
+              >
+                {t('stagePage.enterDataFrom')}
+              </button>
+            </div>
+          )}
 
           {isAdmin && (
             <div className="stage-add-instrument">

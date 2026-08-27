@@ -23,7 +23,7 @@ export const en = {
     logoAlt: 'Orchestra Manager logo',
     signIn: 'Sign in',
     username: 'Username',
-    usernamePlaceholder: 'admin or musician',
+    usernamePlaceholder: 'username',
     password: 'Password',
     failed: 'Login failed',
     loggingIn: 'Signing in',
@@ -146,7 +146,11 @@ export const en = {
     pdfRemoveFailed: 'Removing the PDF failed.',
     pdfLoadFailed: 'Could not load the PDF.',
     pdfInvalidType: 'Please choose a PDF file.',
-    pdfAdminHint: 'Upload a PDF to show below the seating chart for everyone in this project.',
+    pdfAdminHint: 'Upload a PDF to show the stage layout for everyone in this project.',
+    enterDataFrom: 'Enter data from',
+    selectPastProject: 'Select a past project',
+    copiedFrom: 'Names copied from {project}. Save seating to keep them.',
+    copyFromEmpty: 'That project has no names to copy.',
   },
   stage: {
     instruments: {
@@ -541,7 +545,7 @@ export const is: Translations = {
     logoAlt: 'Orchestra Manager merki',
     signIn: 'Skr\u00E1 inn',
     username: 'Notandanafn',
-    usernamePlaceholder: 'admin e\u00F0a musician',
+    usernamePlaceholder: 'notandanafn',
     password: 'Lykilor\u00F0',
     failed: 'Innskr\u00E1ning mist\u00F3kst',
     loggingIn: 'Skr\u00E1i inn',
@@ -664,7 +668,11 @@ export const is: Translations = {
     pdfRemoveFailed: 'Ekki t\u00F3kst a\u00F0 fjarl\u00E6gja PDF.',
     pdfLoadFailed: 'Ekki t\u00F3kst a\u00F0 hla\u00F0a PDF.',
     pdfInvalidType: 'Veldu PDF skr\u00E1.',
-    pdfAdminHint: 'Hla\u00F0u upp PDF til a\u00F0 birta hana fyrir ne\u00F0an hlj\u00F3msveitarlistann fyrir alla \u00ED verkefninu.',
+    pdfAdminHint: 'Hla\u00F0u upp PDF til a\u00F0 birta svi\u00F0smyndina fyrir alla \u00ED verkefninu.',
+    enterDataFrom: 'S\u00E6kja g\u00F6gn fr\u00E1',
+    selectPastProject: 'Veldu fyrra verkefni',
+    copiedFrom: 'N\u00F6fn afritu\u00F0 fr\u00E1 {project}. Vista\u00F0u s\u00E6tin til a\u00F0 halda \u00FEeim.',
+    copyFromEmpty: '\u00DEa\u00F0 verkefni hefur engin n\u00F6fn til a\u00F0 afrita.',
   },
   stage: {
     instruments: {
