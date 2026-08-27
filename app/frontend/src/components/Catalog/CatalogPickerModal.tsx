@@ -1,18 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CatalogWork } from '../../lib/types';
+import { api } from '../../lib/api';
 import { useLanguage } from '../../context/LanguageContext';
 import { useModalClose } from '../Layout/useModalClose';
-import { formatWorkLocations, formatWorkTitle, searchCatalog } from '../../lib/catalog';
+import {
+  CATALOG_PICKER_LIMIT,
+  CatalogListPage,
+  formatWorkLocations,
+  formatWorkTitle,
+} from '../../lib/catalog';
 
-const RESULT_LIMIT = 40;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function CatalogPickerModal({
-  works,
   initialQuery,
   onSelect,
   onClose,
 }: {
-  works: CatalogWork[];
   initialQuery?: string;
   onSelect: (work: CatalogWork) => void;
   onClose: () => void;
@@ -20,11 +24,42 @@ export default function CatalogPickerModal({
   const { t } = useLanguage();
   const { closing, requestClose } = useModalClose(onClose);
   const [query, setQuery] = useState(initialQuery || '');
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery || '');
+  const [results, setResults] = useState<CatalogWork[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  const results = useMemo(
-    () => searchCatalog(works, query).slice(0, RESULT_LIMIT),
-    [works, query]
-  );
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({
+      q: debouncedQuery.trim(),
+      sort: 'composer',
+      dir: 'asc',
+      offset: '0',
+      limit: String(CATALOG_PICKER_LIMIT),
+    });
+
+    (async () => {
+      try {
+        const page = await api.get<CatalogListPage>(`/api/catalog?${params.toString()}`);
+        if (cancelled) return;
+        setResults(page.works || []);
+      } catch {
+        if (cancelled) return;
+        setResults([]);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery]);
 
   function choose(work: CatalogWork) {
     onSelect(work);
@@ -47,7 +82,9 @@ export default function CatalogPickerModal({
           />
           <p className="muted small">{t('catalog.program.pickerHint')}</p>
 
-          {results.length === 0 ? (
+          {!loaded ? (
+            <p className="muted">{t('catalog.program.pickerSearching')}</p>
+          ) : results.length === 0 ? (
             <p className="muted">{t('catalog.program.pickerEmpty')}</p>
           ) : (
             <ul className="catalog-picker-list">

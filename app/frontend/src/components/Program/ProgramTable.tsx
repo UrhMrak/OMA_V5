@@ -1,18 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CatalogWork, ProgramRow } from '../../lib/types';
+import { api } from '../../lib/api';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   PROGRAM_COLUMNS,
   ProgramColumn,
   createEmptyProgramRow,
+  formatProgramLength,
   sumProgramLengths,
 } from '../../lib/program';
 import {
-  buildWorkMatchIndex,
-  findWorkById,
+  CatalogResolveResult,
+  catalogWorkKey,
   formatWorkLocations,
   formatWorkTitle,
-  matchProgramRow,
 } from '../../lib/catalog';
 import AutoResizeTextarea from '../AutoResizeTextarea';
 import CatalogPickerModal from '../Catalog/CatalogPickerModal';
@@ -25,25 +26,60 @@ const COLUMN_LABEL_KEYS: Record<ProgramColumn, string> = {
   length: 'program.length',
 };
 
+const RESOLVE_DEBOUNCE_MS = 300;
+
 export default function ProgramTable({
   rows,
   onChange,
   readOnly,
-  catalog,
+  enableCatalog,
 }: {
   rows: ProgramRow[];
   onChange?: (rows: ProgramRow[]) => void;
   readOnly: boolean;
-  /** Supplied for admins only; its presence adds the library location column. */
-  catalog?: CatalogWork[];
+  /** Admins get library location lookup without loading the full catalog. */
+  enableCatalog?: boolean;
 }) {
   const { t } = useLanguage();
   const [pickerRowId, setPickerRowId] = useState<string | null>(null);
+  const [worksById, setWorksById] = useState<Record<string, CatalogWork>>({});
+  const [suggestions, setSuggestions] = useState<Record<string, CatalogWork>>({});
   const totalLength = sumProgramLengths(rows);
 
-  const showCatalog = !!catalog && !!onChange;
-  const matchIndex = useMemo(() => buildWorkMatchIndex(catalog || []), [catalog]);
+  const showCatalog = !!enableCatalog && !!onChange;
   const pickerRow = rows.find((row) => row.id === pickerRowId) || null;
+
+  const resolvePayload = useMemo(() => {
+    const ids = [...new Set(rows.map((row) => row.catalogWorkId).filter(Boolean))] as string[];
+    const matches = rows
+      .filter((row) => !row.catalogWorkId)
+      .map((row) => ({ composer: row.composer, title: row.title }))
+      .filter((match) => catalogWorkKey(match.composer, match.title));
+    return { ids, matches };
+  }, [rows]);
+
+  useEffect(() => {
+    if (!showCatalog) return;
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await api.post<CatalogResolveResult>('/api/catalog/resolve', resolvePayload);
+          if (cancelled) return;
+          setWorksById(result.worksById || {});
+          setSuggestions(result.suggestions || {});
+        } catch {
+          if (cancelled) return;
+          setWorksById({});
+          setSuggestions({});
+        }
+      })();
+    }, RESOLVE_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [showCatalog, resolvePayload]);
 
   if (readOnly && rows.length === 0) return null;
 
@@ -52,17 +88,42 @@ export default function ProgramTable({
     onChange(rows.map((row) => (row.id === rowId ? { ...row, [column]: value } : row)));
   }
 
-  function linkRow(rowId: string, workId: string | null) {
+  function linkRow(rowId: string, workId: string) {
     if (!onChange) return;
+    onChange(rows.map((row) => (row.id === rowId ? { ...row, catalogWorkId: workId } : row)));
+  }
+
+  function applyWork(rowId: string, work: CatalogWork) {
+    if (!onChange) return;
+    setWorksById((current) => ({ ...current, [work.id]: work }));
     onChange(
       rows.map((row) => {
         if (row.id !== rowId) return row;
-        if (!workId) {
-          const { catalogWorkId: _unlinked, ...rest } = row;
-          return rest;
-        }
-        return { ...row, catalogWorkId: workId };
+        return {
+          ...row,
+          composer: work.composer,
+          title: formatWorkTitle(work),
+          instrumentation: work.instrumentation || row.instrumentation,
+          length:
+            work.duration_minutes != null
+              ? formatProgramLength(work.duration_minutes)
+              : row.length,
+          catalogWorkId: work.id,
+        };
       })
+    );
+  }
+
+  function findInLibraryButton(row: ProgramRow, rowNumber: number) {
+    return (
+      <button
+        type="button"
+        className="btn btn-sm"
+        aria-label={t('catalog.program.findInLibraryAria', { number: rowNumber })}
+        onClick={() => setPickerRowId(row.id)}
+      >
+        {t('catalog.program.findInLibrary')}
+      </button>
     );
   }
 
@@ -78,9 +139,7 @@ export default function ProgramTable({
 
   function catalogCell(row: ProgramRow, index: number) {
     const rowNumber = index + 1;
-    const linkedWork = row.catalogWorkId
-      ? findWorkById(catalog || [], row.catalogWorkId)
-      : undefined;
+    const linkedWork = row.catalogWorkId ? worksById[row.catalogWorkId] : undefined;
 
     if (linkedWork) {
       const location = formatWorkLocations(linkedWork);
@@ -90,27 +149,13 @@ export default function ProgramTable({
             {location || t('catalog.program.noHolding')}
           </span>
           <div className="program-catalog-actions">
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => setPickerRowId(row.id)}
-            >
-              {t('catalog.program.change')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              aria-label={t('catalog.program.unlinkAria', { number: rowNumber })}
-              onClick={() => linkRow(row.id, null)}
-            >
-              {t('catalog.program.unlink')}
-            </button>
+            {findInLibraryButton(row, rowNumber)}
           </div>
         </div>
       );
     }
 
-    const suggestion = matchProgramRow(row, matchIndex);
+    const suggestion = suggestions[catalogWorkKey(row.composer, row.title)];
     if (suggestion) {
       const suggestedLocation = formatWorkLocations(suggestion);
       return (
@@ -133,6 +178,7 @@ export default function ProgramTable({
             >
               {t('catalog.program.accept')}
             </button>
+            {findInLibraryButton(row, rowNumber)}
           </div>
         </div>
       );
@@ -142,14 +188,7 @@ export default function ProgramTable({
       <div className="program-catalog-cell">
         <span className="muted small">{t('catalog.program.notInLibrary')}</span>
         <div className="program-catalog-actions">
-          <button
-            type="button"
-            className="btn btn-sm"
-            aria-label={t('catalog.program.linkAria', { number: rowNumber })}
-            onClick={() => setPickerRowId(row.id)}
-          >
-            {t('catalog.program.link')}
-          </button>
+          {findInLibraryButton(row, rowNumber)}
         </div>
       </div>
     );
@@ -245,9 +284,8 @@ export default function ProgramTable({
       )}
       {showCatalog && pickerRow && (
         <CatalogPickerModal
-          works={catalog || []}
           initialQuery={[pickerRow.composer, pickerRow.title].filter(Boolean).join(' ').trim()}
-          onSelect={(work) => linkRow(pickerRow.id, work.id)}
+          onSelect={(work) => applyWork(pickerRow.id, work)}
           onClose={() => setPickerRowId(null)}
         />
       )}

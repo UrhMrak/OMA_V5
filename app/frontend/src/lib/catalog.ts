@@ -124,6 +124,28 @@ function workHaystack(work: CatalogWork): string {
   return [...own, ...holdings].join(' ').toLowerCase();
 }
 
+export const CATALOG_PAGE_SIZE = 50;
+export const CATALOG_PICKER_LIMIT = 40;
+
+export type CatalogListPage = {
+  works: CatalogWork[];
+  total: number;
+  offset: number;
+  limit: number;
+};
+
+export type CatalogResolveResult = {
+  worksById: Record<string, CatalogWork>;
+  suggestions: Record<string, CatalogWork>;
+};
+
+/** Same normalization the database uses for `work_key`. */
+export function catalogWorkKey(composer: string, title: string): string {
+  const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+  const key = `${normalize(composer)}|${normalize(title)}`;
+  return key === '|' ? '' : key;
+}
+
 export function sortWorks(works: CatalogWork[]): CatalogWork[] {
   return [...works].sort(
     (a, b) => a.composer.localeCompare(b.composer) || a.title.localeCompare(b.title)

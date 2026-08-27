@@ -2296,6 +2296,12 @@ body.modal-open {
 .catalog-count {
   margin: 8px 0;
 }
+.catalog-pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
 .catalog-sort-button {
   display: inline-flex;
   align-items: center;

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CatalogWork } from '../lib/types';
-import { useCatalog } from '../context/CatalogContext';
+import { api, API_BASE, authHeaders } from '../lib/api';
 import { useLanguage } from '../context/LanguageContext';
 import { usePageReady } from '../components/Layout/PageTransition';
 import Skeleton from '../components/Layout/Skeleton';
@@ -8,37 +8,98 @@ import CatalogTable from '../components/Catalog/CatalogTable';
 import CatalogItemModal from '../components/Catalog/CatalogItemModal';
 import CatalogImportModal from '../components/Catalog/CatalogImportModal';
 import {
-  CATALOG_FIELDS,
+  CATALOG_PAGE_SIZE,
+  CatalogListPage,
   CatalogSortKey,
   SortDirection,
-  searchCatalog,
-  sortCatalog,
-  toCsvRows,
 } from '../lib/catalog';
-import { downloadCsv } from '../lib/csv';
 
 const CSV_FILENAME = 'music-catalog.csv';
 const SKELETON_ROWS = 8;
 const SKELETON_COLUMNS = 6;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function MusicCatalog() {
-  const { works, loaded, error, loadCatalog } = useCatalog();
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sortKey, setSortKey] = useState<CatalogSortKey>('composer');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [offset, setOffset] = useState(0);
+  const [works, setWorks] = useState<CatalogWork[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [selectedWork, setSelectedWork] = useState<CatalogWork | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
   usePageReady(loaded);
 
-  const rows = useMemo(
-    () => sortCatalog(searchCatalog(works, query), sortKey, sortDirection),
-    [works, query, sortKey, sortDirection]
-  );
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedQuery(query);
+      setOffset(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({
+      q: debouncedQuery.trim(),
+      sort: sortKey,
+      dir: sortDirection,
+      offset: String(offset),
+      limit: String(CATALOG_PAGE_SIZE),
+    });
+
+    (async () => {
+      try {
+        const page = await api.get<CatalogListPage>(`/api/catalog?${params.toString()}`);
+        if (cancelled) return;
+        setWorks(page.works || []);
+        setTotal(page.total || 0);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setWorks([]);
+        setTotal(0);
+        setError(err instanceof Error && err.message ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, sortKey, sortDirection, offset]);
+
+  async function loadPage(nextOffset = offset) {
+    const params = new URLSearchParams({
+      q: debouncedQuery.trim(),
+      sort: sortKey,
+      dir: sortDirection,
+      offset: String(nextOffset),
+      limit: String(CATALOG_PAGE_SIZE),
+    });
+    const page = await api.get<CatalogListPage>(`/api/catalog?${params.toString()}`);
+    setWorks(page.works || []);
+    setTotal(page.total || 0);
+    setError(null);
+    setLoaded(true);
+  }
+
+  useEffect(() => {
+    if (loaded && works.length === 0 && offset > 0) {
+      setOffset(Math.max(0, offset - CATALOG_PAGE_SIZE));
+    }
+  }, [loaded, works.length, offset]);
 
   function toggleSort(key: CatalogSortKey) {
+    setOffset(0);
     if (key === sortKey) {
       setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
       return;
@@ -47,10 +108,35 @@ export default function MusicCatalog() {
     setSortDirection('asc');
   }
 
-  function exportRows() {
-    if (rows.length === 0) return;
-    const headers = CATALOG_FIELDS.map((field) => t(field.labelKey));
-    downloadCsv(CSV_FILENAME, headers, toCsvRows(rows));
+  async function exportRows() {
+    if (isExporting || total === 0) return;
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams({
+        q: debouncedQuery.trim(),
+        sort: sortKey,
+        dir: sortDirection,
+      });
+      const response = await fetch(`${API_BASE}/api/catalog/export?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error((await response.text()) || response.statusText);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = CSV_FILENAME;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : String(err));
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function closeItemModal() {
@@ -59,9 +145,16 @@ export default function MusicCatalog() {
   }
 
   async function refreshAfterChange() {
-    await loadCatalog();
+    await loadPage();
     closeItemModal();
   }
+
+  const from = total === 0 ? 0 : offset + 1;
+  const to = offset + works.length;
+  const pageCount = Math.max(1, Math.ceil(total / CATALOG_PAGE_SIZE));
+  const pageNumber = Math.floor(offset / CATALOG_PAGE_SIZE) + 1;
+  const canPrev = offset > 0;
+  const canNext = offset + works.length < total;
 
   return (
     <div>
@@ -81,7 +174,12 @@ export default function MusicCatalog() {
         <button type="button" className="btn" onClick={() => setIsImporting(true)}>
           {t('catalog.importCsv')}
         </button>
-        <button type="button" className="btn" onClick={exportRows} disabled={rows.length === 0}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => void exportRows()}
+          disabled={total === 0 || isExporting}
+        >
           {t('catalog.exportCsv')}
         </button>
       </div>
@@ -92,9 +190,9 @@ export default function MusicCatalog() {
         </p>
       )}
 
-      {loaded && works.length > 0 && (
+      {loaded && total > 0 && (
         <p className="muted small catalog-count">
-          {t('catalog.count', { count: rows.length, total: works.length })}
+          {t('catalog.count', { from, to, total })}
         </p>
       )}
 
@@ -108,9 +206,9 @@ export default function MusicCatalog() {
             </div>
           ))}
         </div>
-      ) : rows.length > 0 ? (
+      ) : works.length > 0 ? (
         <CatalogTable
-          works={rows}
+          works={works}
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={toggleSort}
@@ -118,6 +216,30 @@ export default function MusicCatalog() {
         />
       ) : error ? null : (
         <p className="muted">{query.trim() ? t('catalog.noResults') : t('catalog.noData')}</p>
+      )}
+
+      {loaded && total > CATALOG_PAGE_SIZE && (
+        <div className="catalog-pager">
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setOffset(Math.max(0, offset - CATALOG_PAGE_SIZE))}
+            disabled={!canPrev}
+          >
+            {t('catalog.pagePrevious')}
+          </button>
+          <span className="muted small">
+            {t('catalog.pageStatus', { page: pageNumber, pages: pageCount })}
+          </span>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => setOffset(offset + CATALOG_PAGE_SIZE)}
+            disabled={!canNext}
+          >
+            {t('catalog.pageNext')}
+          </button>
+        </div>
       )}
 
       {(selectedWork || isCreating) && (
@@ -132,7 +254,8 @@ export default function MusicCatalog() {
         <CatalogImportModal
           onClose={() => setIsImporting(false)}
           onImported={async () => {
-            await loadCatalog();
+            if (offset === 0) await loadPage(0);
+            else setOffset(0);
           }}
         />
       )}

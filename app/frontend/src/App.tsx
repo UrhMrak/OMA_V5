@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { EventsProvider } from './context/EventsContext';
-import { CatalogProvider } from './context/CatalogContext';
 import Dashboard from './routes/Dashboard';
 import CalendarPage from './routes/Calendar';
 import Library from './routes/Library';
@@ -68,12 +67,10 @@ export default function App() {
   return (
     <AuthProvider>
       <EventsProvider>
-        <CatalogProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/*" element={<ProtectedApp />} />
-          </Routes>
-        </CatalogProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={<ProtectedApp />} />
+        </Routes>
       </EventsProvider>
     </AuthProvider>
   );
