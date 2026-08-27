@@ -9,6 +9,7 @@ import {
   formatWorkTitle,
   getHoldings,
 } from '../../lib/catalog';
+import { formatProgramLength, parseDurationMinutes } from '../../lib/program';
 import AutoResizeTextarea from '../AutoResizeTextarea';
 import DeleteIcon from '../icons/DeleteIcon';
 import WaitingMessage from '../WaitingMessage';
@@ -60,7 +61,8 @@ function toWorkForm(work: CatalogWork | null): WorkForm {
     arranger: text(work?.arranger),
     genre: text(work?.genre),
     instrumentation: text(work?.instrumentation),
-    duration_minutes: text(work?.duration_minutes),
+    duration_minutes:
+      work?.duration_minutes == null ? '' : formatProgramLength(work.duration_minutes),
     movements: text(work?.movements),
     keywords: text(work?.keywords),
     notes: text(work?.notes),
@@ -161,12 +163,23 @@ export default function CatalogItemModal({
       return;
     }
 
+    const durationInput = form.duration_minutes.trim();
+    const durationMinutes = parseDurationMinutes(durationInput);
+    if (durationInput && durationMinutes === null) {
+      setError(t('catalog.modal.durationInvalid'));
+      return;
+    }
+
     setIsSaving(true);
     setError('');
     try {
+      const workPayload = {
+        ...form,
+        duration_minutes: durationMinutes === null ? '' : String(durationMinutes),
+      };
       const savedWork = isCreating
-        ? await api.post<CatalogWork>('/api/catalog/works', form)
-        : await api.put<CatalogWork>(`/api/catalog/works/${work!.id}`, form);
+        ? await api.post<CatalogWork>('/api/catalog/works', workPayload)
+        : await api.put<CatalogWork>(`/api/catalog/works/${work!.id}`, workPayload);
 
       for (const id of removedHoldingIds) {
         await api.delete(`/api/catalog/holdings/${id}`);
@@ -217,7 +230,7 @@ export default function CatalogItemModal({
   function workField(
     labelKey: string,
     key: keyof WorkForm,
-    options?: { multiline?: boolean; type?: string; hintKey?: string }
+    options?: { multiline?: boolean; type?: string; hintKey?: string; placeholder?: string }
   ) {
     return (
       <div className="row-gap tight catalog-field">
@@ -236,8 +249,19 @@ export default function CatalogItemModal({
             id={`catalog-work-${key}`}
             className="input"
             type={options?.type || 'text'}
+            placeholder={options?.placeholder}
             value={form[key]}
             onChange={(event) => updateWorkField(key, event.target.value)}
+            onBlur={
+              key === 'duration_minutes'
+                ? (event) => {
+                    const parsed = parseDurationMinutes(event.target.value);
+                    if (parsed !== null) {
+                      updateWorkField(key, formatProgramLength(parsed));
+                    }
+                  }
+                : undefined
+            }
           />
         )}
         {options?.hintKey && <span className="muted small">{t(options.hintKey)}</span>}
@@ -295,7 +319,7 @@ export default function CatalogItemModal({
               {workField('catalog.field.catalogNumber', 'catalog_number')}
               {workField('catalog.field.arranger', 'arranger')}
               {workField('catalog.field.genre', 'genre')}
-              {workField('catalog.field.duration', 'duration_minutes', { type: 'number' })}
+              {workField('catalog.field.duration', 'duration_minutes', { placeholder: '00:00' })}
             </div>
             {workField('catalog.field.instrumentation', 'instrumentation', {
               multiline: true,

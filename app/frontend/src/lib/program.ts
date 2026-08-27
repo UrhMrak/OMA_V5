@@ -40,6 +40,22 @@ export function parseProgramLength(value: string): number | null {
   return hours * 60 + minutes;
 }
 
+/**
+ * Parses a duration for catalog fields: `HH:MM`, or a whole number of minutes
+ * so older minute-only values still import and save.
+ */
+export function parseDurationMinutes(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const asLength = parseProgramLength(trimmed);
+  if (asLength !== null) return asLength;
+  if (!/^\d+$/.test(trimmed)) return null;
+
+  const minutes = Number.parseInt(trimmed, 10);
+  return Number.isFinite(minutes) ? minutes : null;
+}
+
 /** Formats total minutes as `HH:MM`. */
 export function formatProgramLength(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);

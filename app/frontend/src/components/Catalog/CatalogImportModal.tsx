@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useModalClose } from '../Layout/useModalClose';
 import { CATALOG_FIELDS } from '../../lib/catalog';
 import { parseCsv } from '../../lib/csv';
+import { parseDurationMinutes } from '../../lib/program';
 import WaitingMessage from '../WaitingMessage';
 
 const PREVIEW_ROW_LIMIT = 5;
@@ -30,6 +31,8 @@ function autoMapColumns(headers: string[], labelFor: (labelKey: string) => strin
     byLabel.set(normalizeHeader(labelFor(field.labelKey)), field.key);
     byLabel.set(normalizeHeader(field.key), field.key);
   }
+  byLabel.set(normalizeHeader('Duration (minutes)'), 'duration_minutes');
+  byLabel.set(normalizeHeader('Lengd (mínútur)'), 'duration_minutes');
 
   const used = new Set<string>();
   return headers.map((header) => {
@@ -107,7 +110,13 @@ export default function CatalogImportModal({
       const payload: Record<string, string> = {};
       mapping.forEach((fieldKey, index) => {
         if (fieldKey === IGNORE_COLUMN) return;
-        payload[fieldKey] = (row[index] || '').trim();
+        const raw = (row[index] || '').trim();
+        if (fieldKey === 'duration_minutes') {
+          const parsed = parseDurationMinutes(raw);
+          payload[fieldKey] = parsed === null ? '' : String(parsed);
+          return;
+        }
+        payload[fieldKey] = raw;
       });
       return payload;
     });

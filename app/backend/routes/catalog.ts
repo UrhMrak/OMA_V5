@@ -15,7 +15,7 @@ const INSERT_CHUNK_SIZE = 500;
 const MATERIAL_TYPES = new Set(['owned', 'rental', 'borrowed', 'manuscript']);
 const DEFAULT_MATERIAL_TYPE = 'owned';
 
-type FieldType = 'text' | 'integer' | 'date';
+type FieldType = 'text' | 'integer' | 'date' | 'duration';
 
 const WORK_FIELDS: Record<string, FieldType> = {
   composer: 'text',
@@ -25,7 +25,7 @@ const WORK_FIELDS: Record<string, FieldType> = {
   arranger: 'text',
   genre: 'text',
   instrumentation: 'text',
-  duration_minutes: 'integer',
+  duration_minutes: 'duration',
   movements: 'text',
   keywords: 'text',
   notes: 'text',
@@ -61,6 +61,25 @@ function toInteger(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const DURATION_PATTERN = /^(\d{1,2}):(\d{2})$/;
+
+function toDurationMinutes(value: unknown): number | null {
+  const text = toText(value);
+  if (!text) return null;
+
+  const match = text.match(DURATION_PATTERN);
+  if (match) {
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (minutes >= 60) return null;
+    return hours * 60 + minutes;
+  }
+
+  if (!/^\d+$/.test(text)) return null;
+  const parsed = Number.parseInt(text, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function toDate(value: unknown): string | null {
   const text = toText(value);
   if (!text || !ISO_DATE_PATTERN.test(text)) return null;
@@ -69,6 +88,7 @@ function toDate(value: unknown): string | null {
 
 function coerce(value: unknown, type: FieldType): string | number | null {
   if (type === 'integer') return toInteger(value);
+  if (type === 'duration') return toDurationMinutes(value);
   if (type === 'date') return toDate(value);
   return toText(value);
 }

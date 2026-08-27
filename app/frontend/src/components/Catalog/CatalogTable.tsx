@@ -7,6 +7,7 @@ import {
   formatWorkTitle,
   getHoldings,
 } from '../../lib/catalog';
+import { formatProgramLength } from '../../lib/program';
 
 type CatalogColumn = {
   key: CatalogSortKey;
@@ -39,7 +40,8 @@ const COLUMNS: CatalogColumn[] = [
   {
     key: 'duration',
     labelKey: 'catalog.col.duration',
-    value: (work) => (work.duration_minutes === null ? '' : `${work.duration_minutes}`),
+    value: (work) =>
+      work.duration_minutes === null ? '' : formatProgramLength(work.duration_minutes),
     cellClassName: 'stats-nowrap',
   },
   {

@@ -1,4 +1,5 @@
 import { CatalogHolding, CatalogMaterialType, CatalogWork, ProgramRow } from './types';
+import { formatProgramLength } from './program';
 
 export const CATALOG_MATERIAL_TYPES: CatalogMaterialType[] = [
   'owned',
@@ -221,6 +222,9 @@ function fieldValue(work: CatalogWork, holding: CatalogHolding | null, field: Ca
       : (holding as unknown as Record<string, unknown> | null);
   const value = source ? source[field.valueKey || field.key] : null;
   if (value === null || value === undefined) return '';
+  if (field.key === 'duration_minutes' && typeof value === 'number' && Number.isFinite(value)) {
+    return formatProgramLength(value);
+  }
   return String(value);
 }
 
