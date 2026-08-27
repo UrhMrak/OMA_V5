@@ -46,7 +46,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   // eslint-disable-next-line no-console
   console.log(`Server listening on http://localhost:${PORT}`);
   // eslint-disable-next-line no-console

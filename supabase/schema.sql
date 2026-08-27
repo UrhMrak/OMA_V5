@@ -1,9 +1,11 @@
 -- Orchestra Manager - Supabase schema
 -- Run this in the Supabase SQL editor (Dashboard -> SQL Editor -> New query).
 -- The backend connects with the service_role key, which bypasses Row Level
--- Security, so no RLS policies are required for these tables/buckets.
+-- Security. RLS is still enabled with no policies, and anon/authenticated
+-- grants are revoked, so the Data API cannot read these tables.
 
-create extension if not exists "pgcrypto";
+create schema if not exists extensions;
+create extension if not exists "pgcrypto" with schema extensions;
 
 -- News / posts
 create table if not exists public.posts (
@@ -47,6 +49,16 @@ create table if not exists public.library_items (
 alter table public.library_items add column if not exists mime_type text;
 
 create index if not exists library_items_path_idx on public.library_items (path);
+
+alter table public.library_items
+  add column if not exists parent_path text generated always as (
+    case
+      when path like '%/%' then regexp_replace(path, '/[^/]+$', '')
+      else ''
+    end
+  ) stored;
+
+create index if not exists library_items_parent_path_idx on public.library_items (parent_path);
 
 -- Music catalog: the composition (what is performed)
 create table if not exists public.catalog_works (
@@ -96,7 +108,7 @@ create index if not exists catalog_works_instrumentation_idx on public.catalog_w
 create index if not exists catalog_works_duration_idx on public.catalog_works (duration_minutes);
 
 -- Fast librarian search: one denormalized document per work, including holdings.
-create extension if not exists pg_trgm;
+create extension if not exists pg_trgm with schema extensions;
 
 alter table public.catalog_works
   add column if not exists search_text text not null default '';
@@ -123,7 +135,10 @@ begin
   end if;
 end $$;
 
-create index if not exists catalog_works_work_key_idx on public.catalog_works (work_key);
+drop index if exists public.catalog_works_work_key_idx;
+create unique index if not exists catalog_works_work_key_idx
+  on public.catalog_works (work_key)
+  where work_key is not null and work_key <> '|';
 create index if not exists catalog_works_search_trgm_idx
   on public.catalog_works using gin (search_text gin_trgm_ops);
 create index if not exists catalog_works_holding_count_idx on public.catalog_works (holding_count);
@@ -133,6 +148,7 @@ create or replace function public.catalog_holding_label(h public.catalog_holding
 returns text
 language sql
 stable
+set search_path = public
 as $$
   select concat_ws(
     ' - ',
@@ -152,6 +168,7 @@ $$;
 create or replace function public.refresh_catalog_work_cache(p_work_id uuid)
 returns void
 language plpgsql
+set search_path = public
 as $$
 declare
   v_count integer;
@@ -216,6 +233,7 @@ $$;
 create or replace function public.catalog_works_cache_trigger()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   perform public.refresh_catalog_work_cache(new.id);
@@ -226,6 +244,7 @@ $$;
 create or replace function public.catalog_holdings_cache_trigger()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if tg_op = 'DELETE' then
@@ -335,3 +354,15 @@ on conflict (id) do nothing;
 insert into storage.buckets (id, name, public)
 values ('posts', 'posts', false)
 on conflict (id) do nothing;
+
+alter table public.posts enable row level security;
+alter table public.events enable row level security;
+alter table public.library_items enable row level security;
+alter table public.catalog_works enable row level security;
+alter table public.catalog_holdings enable row level security;
+
+revoke all on table public.posts from anon, authenticated;
+revoke all on table public.events from anon, authenticated;
+revoke all on table public.library_items from anon, authenticated;
+revoke all on table public.catalog_works from anon, authenticated;
+revoke all on table public.catalog_holdings from anon, authenticated;

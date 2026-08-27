@@ -6,7 +6,7 @@ services:
   - type: web
     name: orchestra-manager-backend
     runtime: node
-    plan: free
+    plan: starter
     rootDir: app/backend
     buildCommand: npm install && npm run build
     startCommand: npm start

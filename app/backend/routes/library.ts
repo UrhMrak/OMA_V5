@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
+import { createReadStream, promises as fs } from 'fs';
+import os from 'os';
+import { Readable } from 'stream';
 import { requireAdmin, requireAuth } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 import { contentDisposition, decodeUploadFilename, toStorageKey } from '../lib/filenames';
@@ -17,6 +20,7 @@ type LibraryRow = {
   storage_key: string | null;
   size: number | null;
   mime_type?: string | null;
+  parent_path?: string | null;
   created_at?: string;
 };
 
@@ -35,8 +39,10 @@ type LibraryNode = {
   children?: LibraryNode[];
 };
 
+const PAGE_SIZE = 1000;
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  dest: os.tmpdir(),
   limits: { fileSize: MAX_UPLOAD_FILE_SIZE_BYTES },
   preservePath: true,
 });
@@ -134,6 +140,28 @@ function uniqueStorageKey(usedKeys: Set<string>, itemPath: string): string {
   return storageKeyValue;
 }
 
+async function fetchMatchingRows<T>(columns: string, apply?: (query: any) => any): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let query = supabase.from(TABLE).select(columns).order('id', { ascending: true });
+    if (apply) query = apply(query);
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data || []) as T[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
+function fileUploadBody(tempPath: string): ReadableStream<Uint8Array> {
+  return Readable.toWeb(createReadStream(tempPath)) as ReadableStream<Uint8Array>;
+}
+
+async function removeTempFiles(paths: string[]) {
+  await Promise.all(paths.map((tempPath) => fs.unlink(tempPath).catch(() => undefined)));
+}
+
 function folderRows(paths: string[]): LibraryRow[] {
   return paths.map((p) => ({
     id: crypto.randomUUID(),
@@ -226,9 +254,12 @@ function buildTree(rows: LibraryRow[]): LibraryNode {
 
 router.get('/tree', requireAuth, async (_req, res) => {
   await ensureDefaultFolders();
-  const { data, error } = await supabase.from(TABLE).select('*');
-  if (error) return res.status(500).send(error.message);
-  res.json(buildTree((data || []) as LibraryRow[]));
+  try {
+    const rows = await fetchMatchingRows<LibraryRow>('*');
+    res.json(buildTree(rows));
+  } catch (error) {
+    res.status(500).send(error instanceof Error ? error.message : 'Failed to load library');
+  }
 });
 
 router.post('/folder', requireAdmin, async (req, res) => {
@@ -280,7 +311,9 @@ router.post(
     folder = normalizePath(folder);
 
     const files = (req.files as Express.Multer.File[] | undefined) || [];
+    const tempPaths = files.map((file) => file.path).filter(Boolean);
 
+    try {
     if (!folder) return res.status(400).json({ error: 'folder parameter required' });
     if (!isSafePath(folder)) return res.status(400).json({ error: 'Invalid path' });
     if (files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
@@ -288,15 +321,13 @@ router.post(
     await ensureFolders(folder);
 
     const existingPrefix = `${folder}/`;
-    const { data: existing } = await supabase
-      .from(TABLE)
-      .select('path, name, storage_key')
-      .eq('type', 'file')
-      .like('path', `${existingPrefix}%`);
+    const existing = await fetchMatchingRows<LibraryRow>('path, name, storage_key', (query) =>
+      query.eq('type', 'file').like('path', `${existingPrefix}%`)
+    );
     const usedNamesByFolder = new Map<string, Set<string>>();
     const usedKeys = new Set<string>();
 
-    for (const row of (existing || []) as LibraryRow[]) {
+    for (const row of existing) {
       const parent = parentPath(row.path);
       if (!usedNamesByFolder.has(parent)) usedNamesByFolder.set(parent, new Set());
       usedNamesByFolder.get(parent)!.add(row.name);
@@ -330,7 +361,7 @@ router.post(
 
       const { error: uploadError } = await supabase.storage
         .from(LIBRARY_BUCKET)
-        .upload(storageKeyValue, file.buffer, { contentType: mimeType, upsert: true });
+        .upload(storageKeyValue, fileUploadBody(file.path), { contentType: mimeType, upsert: true });
       if (uploadError) return res.status(500).json({ error: uploadError.message });
 
       const { error: insertError } = await supabase.from(TABLE).insert({
@@ -348,6 +379,15 @@ router.post(
     }
 
     res.json({ ok: true, folder, files: saved });
+    } catch (error) {
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: error instanceof Error ? error.message : 'Upload failed',
+        });
+      }
+    } finally {
+      await removeTempFiles(tempPaths);
+    }
   }
 );
 
@@ -359,18 +399,17 @@ router.delete('/item', requireAdmin, async (req, res) => {
   const { data: item } = await supabase.from(TABLE).select('*').eq('path', rel).maybeSingle();
   if (!item) return res.status(404).send('Not found');
 
-  if (item.type === 'folder') {
+  try {
+    if (item.type === 'folder') {
     // Gather this folder plus everything underneath it.
-    const { data: descendants } = await supabase
-      .from(TABLE)
-      .select('*')
-      .or(`path.eq.${rel},path.like.${rel}/%`);
-    const rows = (descendants || []) as LibraryRow[];
+    const rows = await fetchMatchingRows<LibraryRow>('*', (query) =>
+      query.or(`path.eq.${rel},path.like.${rel}/%`)
+    );
     const fileKeys = rows
       .filter((row) => row.type === 'file' && row.storage_key)
       .map((row) => row.storage_key as string);
-    if (fileKeys.length > 0) {
-      await supabase.storage.from(LIBRARY_BUCKET).remove(fileKeys);
+    for (let i = 0; i < fileKeys.length; i += PAGE_SIZE) {
+      await supabase.storage.from(LIBRARY_BUCKET).remove(fileKeys.slice(i, i + PAGE_SIZE));
     }
     const { error } = await supabase.from(TABLE).delete().or(`path.eq.${rel},path.like.${rel}/%`);
     if (error) return res.status(500).send(error.message);
@@ -383,6 +422,9 @@ router.delete('/item', requireAdmin, async (req, res) => {
   }
 
   res.json({ ok: true });
+  } catch (error) {
+    res.status(500).send(error instanceof Error ? error.message : 'Failed to delete');
+  }
 });
 
 router.post('/rename', requireAdmin, async (req, res) => {
@@ -411,11 +453,7 @@ router.post('/rename', requireAdmin, async (req, res) => {
   if (conflict) return res.status(409).send('An item with that name already exists');
 
   if (item.type === 'folder') {
-    const { data: descendants } = await supabase
-      .from(TABLE)
-      .select('*')
-      .like('path', `${rel}/%`);
-    const rows = (descendants || []) as LibraryRow[];
+    const rows = await fetchMatchingRows<LibraryRow>('*', (query) => query.like('path', `${rel}/%`));
 
     const { error: renameError } = await supabase
       .from(TABLE)
@@ -478,11 +516,7 @@ router.post('/move', requireAdmin, async (req, res) => {
   if (targetFolder) await ensureFolders(targetFolder);
 
   if (item.type === 'folder') {
-    const { data: descendants } = await supabase
-      .from(TABLE)
-      .select('*')
-      .like('path', `${rel}/%`);
-    const rows = (descendants || []) as LibraryRow[];
+    const rows = await fetchMatchingRows<LibraryRow>('*', (query) => query.like('path', `${rel}/%`));
 
     const { error: moveError } = await supabase
       .from(TABLE)
@@ -521,28 +555,36 @@ router.get('/download', requireAuth, async (req, res) => {
     .maybeSingle();
   if (!item || !item.storage_key) return res.status(404).send('Not found');
 
-  const { data, error } = await supabase.storage.from(LIBRARY_BUCKET).download(item.storage_key);
-  if (error || !data) return res.status(404).send('Not found');
+  const { data, error } = await supabase.storage
+    .from(LIBRARY_BUCKET)
+    .createSignedUrl(item.storage_key, 60);
+  if (error || !data?.signedUrl) return res.status(404).send('Not found');
 
-  const buffer = Buffer.from(await data.arrayBuffer());
+  const upstream = await fetch(data.signedUrl);
+  if (!upstream.ok || !upstream.body) return res.status(404).send('Not found');
+
   const mimeType = item.mime_type || 'application/octet-stream';
   const disposition = isInlineMime(mimeType) ? 'inline' : 'attachment';
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Content-Disposition', contentDisposition(disposition, item.name));
-  res.send(buffer);
+  Readable.fromWeb(upstream.body as import('stream/web').ReadableStream).pipe(res);
 });
 
 router.get('/list', requireAuth, async (req, res) => {
   const rel = normalizePath(String(req.query.path || ''));
   if (rel && !isSafePath(rel)) return res.status(400).send('Invalid path');
 
-  const { data, error } = await supabase.from(TABLE).select('*');
-  if (error) return res.status(500).send(error.message);
-
-  const items = ((data || []) as LibraryRow[])
-    .filter((row) => parentPath(row.path) === rel)
-    .map((row) => ({ name: row.name, type: row.type }));
-  res.json({ path: rel, items });
+  try {
+    const rows = await fetchMatchingRows<LibraryRow>('name, type', (query) =>
+      query.eq('parent_path', rel)
+    );
+    res.json({
+      path: rel,
+      items: rows.map((row) => ({ name: row.name, type: row.type })),
+    });
+  } catch (error) {
+    res.status(500).send(error instanceof Error ? error.message : 'Failed to list folder');
+  }
 });
 
 export default router;

@@ -9,6 +9,7 @@ import WaitingMessage from '../WaitingMessage';
 
 const PREVIEW_ROW_LIMIT = 5;
 const IGNORE_COLUMN = '';
+const IMPORT_CHUNK_SIZE = 500;
 
 type ImportSummary = {
   worksCreated: number;
@@ -129,10 +130,24 @@ export default function CatalogImportModal({
     setSummary(null);
 
     try {
-      const result = await api.post<ImportSummary>('/api/catalog/import', {
-        rows: buildPayloadRows(),
-      });
-      setSummary(result);
+      const rows = buildPayloadRows();
+      const summary: ImportSummary = {
+        worksCreated: 0,
+        holdingsCreated: 0,
+        holdingsUpdated: 0,
+        skipped: 0,
+      };
+
+      for (let index = 0; index < rows.length; index += IMPORT_CHUNK_SIZE) {
+        const chunk = rows.slice(index, index + IMPORT_CHUNK_SIZE);
+        const result = await api.post<ImportSummary>('/api/catalog/import', { rows: chunk });
+        summary.worksCreated += result.worksCreated;
+        summary.holdingsCreated += result.holdingsCreated;
+        summary.holdingsUpdated += result.holdingsUpdated;
+        summary.skipped += result.skipped;
+      }
+
+      setSummary(summary);
       await onImported();
     } catch (importError) {
       console.error('Catalog import failed:', importError);
