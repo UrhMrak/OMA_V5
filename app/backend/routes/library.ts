@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
-import { createReadStream, promises as fs } from 'fs';
+import { promises as fs } from 'fs';
 import os from 'os';
 import { Readable } from 'stream';
 import { requireAdmin, requireAuth } from '../middleware/auth';
@@ -152,10 +152,6 @@ async function fetchMatchingRows<T>(columns: string, apply?: (query: any) => any
     if (page.length < PAGE_SIZE) break;
   }
   return rows;
-}
-
-function fileUploadBody(tempPath: string): ReadableStream<Uint8Array> {
-  return Readable.toWeb(createReadStream(tempPath)) as ReadableStream<Uint8Array>;
 }
 
 async function removeTempFiles(paths: string[]) {
@@ -359,9 +355,10 @@ router.post(
       const itemPath = `${targetFolder}/${candidate}`;
       const storageKeyValue = uniqueStorageKey(usedKeys, itemPath);
 
+      const fileBuffer = await fs.readFile(file.path);
       const { error: uploadError } = await supabase.storage
         .from(LIBRARY_BUCKET)
-        .upload(storageKeyValue, fileUploadBody(file.path), { contentType: mimeType, upsert: true });
+        .upload(storageKeyValue, fileBuffer, { contentType: mimeType, upsert: true });
       if (uploadError) return res.status(500).json({ error: uploadError.message });
 
       const { error: insertError } = await supabase.from(TABLE).insert({
